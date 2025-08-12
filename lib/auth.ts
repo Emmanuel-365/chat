@@ -14,6 +14,71 @@ import { getInvitation, acceptInvitation } from "./invitations";
 import logger from "./logger";
 import { AuthError } from "./errors";
 
+export const createAccountFromInvitation = async (
+  invitationId: string,
+  password: string
+) => {
+  try {
+    const invitation = await getInvitation(invitationId);
+
+    if (!invitation || invitation.status !== "pending") {
+      throw new AuthError("Invalid or used invitation code.");
+    }
+
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      invitation.email,
+      password
+    );
+    const user = userCredential.user;
+
+    // Create user document in Firestore
+    const userData: SchoolUser = {
+      uid: user.uid,
+      email: user.email!,
+      displayName: invitation.displayName,
+      role: invitation.role,
+      isActive: true,
+      createdAt: new Date(),
+      ...(invitation.role === "student" && { studentProfile: invitation.studentProfile }),
+    };
+
+    await setDoc(doc(db, "users", user.uid), userData);
+    await acceptInvitation(invitationId);
+    await sendEmailVerification(user);
+
+    return { user: userData, error: null };
+  } catch (error: unknown) {
+    logger.error(error, "Error creating account from invitation");
+    let errorMessage = "An unexpected error occurred during registration. Please try again.";
+    if (error instanceof Error) {
+      if (typeof error === 'object' && error !== null && 'code' in error) {
+        switch ((error as { code: string }).code) {
+          case "auth/email-already-in-use":
+            errorMessage = "This email is already in use.";
+            break;
+          case "auth/invalid-email":
+            errorMessage = "Invalid email address.";
+            break;
+          case "auth/operation-not-allowed":
+            errorMessage = "Email/password accounts are not enabled.";
+            break;
+          case "auth/weak-password":
+            errorMessage = "Password is too weak.";
+            break;
+          default:
+            break;
+        }
+      } else {
+        errorMessage = "An unexpected error occurred. Please try again.";
+      }
+    } else {
+      errorMessage = "An unknown error occurred. Please try again.";
+    }
+    throw new AuthError(errorMessage);
+  }
+};
+
 export const createAccount = async (
   email: string,
   password: string,
@@ -55,10 +120,9 @@ export const createAccount = async (
 
     return { user: userData, error: null };
   } catch (error: unknown) {
-    logger.error({ err: error }, "Error creating account");
-    let errorMessage = "An unexpected error occurred during registration.";
+    logger.error(error, "Error creating account");
+    let errorMessage = "An unexpected error occurred during registration. Please try again."; // Default generic message
     if (error instanceof Error) {
-      errorMessage = error.message;
       if (typeof error === 'object' && error !== null && 'code' in error) {
         switch ((error as { code: string }).code) { // Type assertion for 'code'
           case "auth/email-already-in-use":
@@ -74,10 +138,16 @@ export const createAccount = async (
             errorMessage = "Password is too weak.";
             break;
           default:
-            // errorMessage already set to default
+            // Keep the generic message if no specific code matches
             break;
         }
+      } else {
+        // If it's an Error instance but not a Firebase error with a 'code'
+        errorMessage = "An unexpected error occurred. Please try again.";
       }
+    } else {
+      // If it's not even an Error instance
+      errorMessage = "An unknown error occurred. Please try again.";
     }
     throw new AuthError(errorMessage);
   }
@@ -88,12 +158,11 @@ export const signIn = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    if (!user.emailVerified) {
-      throw new AuthError("Please verify your email before logging in.");
-    }
-
     // Get user data from Firestore
     const userDoc = await getDoc(doc(db, "users", user.uid));
+
+
+    
     if (userDoc.exists()) {
       const userData = userDoc.data() as SchoolUser;
 
@@ -102,34 +171,40 @@ export const signIn = async (email: string, password: string) => {
         lastSeen: new Date(),
       });
 
+      
+
       return { user: userData, error: null };
     } else {
       throw new AuthError("User data not found.");
     }
   } catch (error: unknown) {
-    logger.error({ err: error }, "Error signing in");
-    let errorMessage = "An unexpected error occurred during login.";
+    logger.error(error, "Error signing in");
+    let errorMessage = "An unexpected error occurred during login. Please try again."; // Default generic message
     if (error instanceof Error) {
-      errorMessage = error.message;
       if (typeof error === 'object' && error !== null && 'code' in error) {
-        switch ((error as { code: string }).code) { // Type assertion for 'code'
+        switch ((error as { code: string }).code) {
           case "auth/invalid-email":
+          case "auth/user-not-found":
+          case "auth/wrong-password":
             errorMessage = "Invalid email or password.";
             break;
           case "auth/user-disabled":
             errorMessage = "Your account has been disabled.";
             break;
-          case "auth/user-not-found":
-            errorMessage = "Invalid email or password.";
-            break;
-          case "auth/wrong-password":
-            errorMessage = "Invalid email or password.";
+          case "auth/email-already-in-use": // Added this case for signIn if it ever happens
+            errorMessage = "This email is already in use.";
             break;
           default:
-            // errorMessage already set to default
+            // Keep the generic message if no specific code matches
             break;
         }
+      } else {
+        // If it's an Error instance but not a Firebase error with a 'code'
+        errorMessage = "An unexpected error occurred. Please try again.";
       }
+    } else {
+      // If it's not even an Error instance
+      errorMessage = "An unknown error occurred. Please try again.";
     }
     throw new AuthError(errorMessage);
   }

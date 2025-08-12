@@ -42,9 +42,6 @@ export default function HomePage() {
             <Button onClick={() => router.push("/login")} size="lg">
               Se connecter
             </Button>
-            <Button onClick={() => router.push("/register")} variant="outline" size="lg">
-              S&apos;inscrire
-            </Button>
           </div>
         </div>
 

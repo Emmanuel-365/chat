@@ -7,7 +7,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ user }: UserProfileProps) {
-  const initials = user.displayName
+  const initials = (user.displayName || "")
     .split(" ")
     .map((name) => name[0])
     .join("")

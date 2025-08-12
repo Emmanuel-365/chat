@@ -34,6 +34,7 @@ export const sendMessage = async (
       type: recipientId ? "direct" : "class",
       ...(recipientId && { recipientId }),
       ...(classId && { classId }),
+      ...(recipientId && { participants: [sender.uid, recipientId] }),
     };
 
     await addDoc(collection(db, "messages"), messageData);
@@ -90,12 +91,10 @@ export const subscribeToMessages = (
   let q;
 
   if (recipientId) {
-    // Direct messages between two users
-    const conversationId = [userId, recipientId].sort().join("-");
     q = query(
       collection(db, "messages"),
       where("type", "==", "direct"),
-      where("conversationId", "==", conversationId),
+      where("participants", "array-contains-all", [userId, recipientId]),
       orderBy("timestamp", "asc")
     );
   } else if (classId) {
@@ -111,17 +110,22 @@ export const subscribeToMessages = (
   }
 
   return onSnapshot(q, (snapshot) => {
-    const messages: Message[] = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      messages.push({
-        id: doc.id,
-        ...data,
-        timestamp: data.timestamp?.toDate() || new Date(),
-      } as Message);
-    });
-    if (callback) {
-      callback(messages);
+    try {
+      const messages: Message[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        messages.push({
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate() || new Date(),
+        } as Message);
+      });
+      if (callback) {
+        callback(messages);
+      }
+    } catch (error) {
+      console.error("Error processing messages snapshot:", error);
+      // Optionally, you might want to notify the UI about the error
     }
   });
 };

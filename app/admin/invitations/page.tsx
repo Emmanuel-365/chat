@@ -15,6 +15,7 @@ import { AuthGuard } from "@/components/auth/auth-guard";
 export default function InvitationsPage() {
   const { user } = useAuth();
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<UserRole>("student");
   const [studentProfile, setStudentProfile] = useState<StudentProfile>({});
   const [loading, setLoading] = useState(false);
@@ -38,12 +39,14 @@ export default function InvitationsPage() {
         email,
         role,
         user.uid,
+        displayName,
         role === "student" ? studentProfile : undefined
       );
 
       if (success) {
         setSuccess(`Invitation sent to ${email}`);
         setEmail("");
+        setDisplayName("");
         setStudentProfile({});
       }
     } catch (err: unknown) {
@@ -78,6 +81,17 @@ export default function InvitationsPage() {
                   placeholder="user@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Full Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   required
                 />
               </div>

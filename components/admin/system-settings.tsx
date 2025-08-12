@@ -1,10 +1,81 @@
-"use client"
+'''"use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Settings, Database, Shield, MessageCircle, Users } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Settings, Database, Shield, MessageCircle, Users, Loader2 } from "lucide-react"
+import { getSystemSettings, updateSystemSettings, type SystemSettings } from "@/lib/admin"
 
 export function SystemSettings() {
+  const [settings, setSettings] = useState<SystemSettings | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const currentSettings = await getSystemSettings()
+        if (currentSettings) {
+          setSettings(currentSettings)
+        } else {
+          // Initialize default settings if none exist
+          const defaultSettings: SystemSettings = { allowPublicRegistration: false };
+          await updateSystemSettings(defaultSettings);
+          setSettings(defaultSettings);
+        }
+      } catch (err: any) {
+        setError("Failed to load settings: " + err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  const handleSettingChange = async (key: keyof SystemSettings, value: boolean) => {
+    if (!settings) return;
+
+    setSaving(true)
+    setError(null)
+    try {
+      const updatedSettings = { ...settings, [key]: value };
+      setSettings(updatedSettings);
+      const success = await updateSystemSettings(updatedSettings);
+      if (!success) {
+        setError("Failed to save settings.");
+        // Revert local state if save fails
+        setSettings(settings);
+      }
+    } catch (err: any) {
+      setError("Failed to save settings: " + err.message);
+      // Revert local state if save fails
+      setSettings(settings);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex justify-center items-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading settings...</p>
+      </div>
+    )
+  }
+
+  if (error && !settings) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        <p>{error}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -12,6 +83,12 @@ export function SystemSettings() {
         <h1 className="text-2xl font-bold">Paramètres Système</h1>
         <p className="text-muted-foreground">Configuration et paramètres de votre plateforme EcoleChat</p>
       </div>
+
+      {error && (
+        <div className="text-red-500 text-sm">
+          <p>{error}</p>
+        </div>
+      )}
 
       {/* Settings Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -106,7 +183,13 @@ export function SystemSettings() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Inscription libre</span>
-              <Badge variant="secondary">Activée</Badge>
+              {settings && (
+                <Switch
+                  checked={settings.allowPublicRegistration}
+                  onCheckedChange={(checked) => handleSettingChange("allowPublicRegistration", checked)}
+                  disabled={saving}
+                />
+              )}
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Validation email</span>
@@ -168,3 +251,4 @@ export function SystemSettings() {
     </div>
   )
 }
+'''

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import pino from "pino";
 
 let logger: pino.Logger;

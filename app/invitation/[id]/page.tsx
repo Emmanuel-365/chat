@@ -1,4 +1,4 @@
-"use client"
+'''"use client"
 
 import type React from "react"
 
@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, CheckCircle, AlertCircle, UserCheck } from "lucide-react";
-import { getInvitation, acceptInvitation } from "@/lib/invitations";
+import { getInvitation } from "@/lib/invitations";
+import { createAccountFromInvitation } from "@/lib/auth";
 import type { Invitation as PendingInvitation } from "@/types/user";
 import { RoleBadge } from "@/components/auth/role-badge";
 import zxcvbn from "zxcvbn";
@@ -85,7 +86,7 @@ export default function InvitationPage() {
     setError(null);
 
     try {
-      await acceptInvitation(invitationId);
+      await createAccountFromInvitation(invitationId, password);
       setSuccess(true);
       setTimeout(() => {
         router.push("/login");
@@ -172,10 +173,6 @@ export default function InvitationPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Email:</span>
                 <span className="text-sm">{invitation.email}</span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Nom d&apos;utilisateur:</span>
-                <span className="text-sm font-mono bg-white px-2 py-1 rounded border">{invitation.username}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Rôle:</span>
@@ -275,3 +272,4 @@ export default function InvitationPage() {
     </div>
   )
 }
+'''

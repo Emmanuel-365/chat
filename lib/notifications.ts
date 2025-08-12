@@ -45,16 +45,21 @@ export const subscribeToNotifications = (
   const q = query(collection(db, "notifications"), where("userId", "==", userId), orderBy("createdAt", "desc"))
 
   return onSnapshot(q, (snapshot) => {
-    const notifications: Notification[] = []
-    snapshot.forEach((doc) => {
-      const data = doc.data()
-      notifications.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-      } as Notification)
-    })
-    callback(notifications)
+    try {
+      const notifications: Notification[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        notifications.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+        } as Notification)
+      })
+      callback(notifications)
+    } catch (error) {
+      console.error("Error processing notifications snapshot:", error);
+      // Optionally, you might want to notify the UI about the error
+    }
   })
 }
 

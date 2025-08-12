@@ -5,7 +5,7 @@ import type { UserRole, StudentProfile, Invitation } from "@/types/user";
 import logger from "./logger";
 import { InvitationError } from "./errors";
 
-export const createInvitation = async (email: string, role: UserRole, createdBy: string, studentProfile?: StudentProfile) => {
+export const createInvitation = async (email: string, role: UserRole, createdBy: string, displayName: string, studentProfile?: StudentProfile) => {
   try {
     const invitationData: Omit<Invitation, 'id'> = {
       email,
@@ -13,6 +13,7 @@ export const createInvitation = async (email: string, role: UserRole, createdBy:
       status: "pending",
       createdAt: new Date(),
       createdBy,
+      displayName,
       ...(studentProfile && { studentProfile }),
     };
 

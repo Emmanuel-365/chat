@@ -27,6 +27,11 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin(request.auth.uid);
     }
 
+    // Settings - only admins can read and write
+    match /settings/{settingId} {
+      allow read, write: if isAdmin(request.auth.uid);
+    }
+
     // Helper functions
     function isAdmin(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
@@ -37,9 +42,9 @@ service cloud.firestore {
     }
 
     function canAccessMessage(userId, messageData) {
-      // Allow if user is sender or recipient in direct message
+      // Allow if user is a participant in direct message
       if (messageData.type == 'direct') {
-        return userId == messageData.senderId || userId == messageData.recipientId;
+        return userId in messageData.participants;
       }
       // Allow if user is part of the class in class message
       if (messageData.type == 'class') {

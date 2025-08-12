@@ -21,19 +21,26 @@ export default function LoginPage() {
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    const { user, error: authError } = await signIn(email, password)
+    try {
+      const { user } = await signIn(email, password);
 
-    if (authError) {
-      setError(authError)
-      setLoading(false)
-    } else if (user) {
-      router.push("/dashboard")
+      if (user) {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred during login.");
+      }
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">

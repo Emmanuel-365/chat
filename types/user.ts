@@ -42,8 +42,7 @@ export interface Message {
 export interface Invitation {
   id: string;
   email: string;
-  displayName?: string; // Added displayName property
-  username?: string; // Added username property
+  displayName: string; // Added displayName property
   role: UserRole;
   status: "pending" | "accepted";
   createdAt: Date;

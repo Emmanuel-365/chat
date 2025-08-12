@@ -8,9 +8,15 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  getDoc,
+  setDoc,
 } from "firebase/firestore"
 import { db } from "./firebase"
 import type { SchoolUser, Message, UserRole } from "@/types/user"
+
+export interface SystemSettings {
+  allowPublicRegistration: boolean;
+}
 
 export interface AdminStats {
   totalUsers: number
@@ -21,6 +27,29 @@ export interface AdminStats {
   totalMessages: number
   activeUsers: number
 }
+
+export const getSystemSettings = async (): Promise<SystemSettings | null> => {
+  try {
+    const settingsDoc = await getDoc(doc(db, "settings", "config"));
+    if (settingsDoc.exists()) {
+      return settingsDoc.data() as SystemSettings;
+    }
+    return null;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des paramètres système:", error);
+    return null;
+  }
+};
+
+export const updateSystemSettings = async (settings: Partial<SystemSettings>): Promise<boolean> => {
+  try {
+    await setDoc(doc(db, "settings", "config"), settings, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des paramètres système:", error);
+    return false;
+  }
+};
 
 export const getAdminStats = async (): Promise<AdminStats> => {
   try {
