@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation"
 
 export function AdminDashboard() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "classes" | "messages" | "settings" | "invitations">("stats")
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "classes" | "messages" | "settings">("stats")
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -88,14 +88,7 @@ export function AdminDashboard() {
             Paramètres Système
           </Button>
 
-          <Button
-            variant={activeTab === "invitations" ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => router.push("/admin/invitations")}
-          >
-            <Mail className="h-4 w-4 mr-3" />
-            Invitations
-          </Button>
+          
         </div>
 
         {/* Footer */}
