@@ -15,17 +15,17 @@ import { getAllUsers } from "@/lib/contacts"
 import { updateUserRole, toggleUserStatus, deleteUser } from "@/lib/admin"
 import { RoleBadge } from "@/components/auth/role-badge"
 import { UserCreation } from "./user-creation"
-import type { SchoolUser } from "@/types/user"
+import type { SchoolUser, UserRole } from "@/types/user"
 
 export function UserManagement() {
   const [users, setUsers] = useState<SchoolUser[]>([])
   const [filteredUsers, setFilteredUsers] = useState<SchoolUser[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState<"all" | "student" | "teacher" | "admin">("all")
+  const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all")
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<SchoolUser | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [editingRole, setEditingRole] = useState<"student" | "teacher" | "admin">("student")
+  const [editingRole, setEditingRole] = useState<UserRole>("student")
   const [actionLoading, setActionLoading] = useState(false)
   const [showCreateUser, setShowCreateUser] = useState(false)
 
@@ -49,7 +49,8 @@ export function UserManagement() {
         (user) =>
           user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (user.className && user.className.toLowerCase().includes(searchTerm.toLowerCase())),
+          (user.role === "student" &&
+            user.studentProfile?.className?.toLowerCase().includes(searchTerm.toLowerCase())),
       )
     }
 
@@ -91,19 +92,15 @@ export function UserManagement() {
   }
 
   const handleDeleteUser = async (user: SchoolUser) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur ${user.displayName} ?`)) {
-      return
-    }
-
-    setActionLoading(true)
-    const success = await deleteUser(user.uid)
+    setActionLoading(true);
+    const success = await deleteUser(user.uid);
 
     if (success) {
-      const updatedUsers = users.filter((u) => u.uid !== user.uid)
-      setUsers(updatedUsers)
+      const updatedUsers = users.filter((u) => u.uid !== user.uid);
+      setUsers(updatedUsers);
     }
 
-    setActionLoading(false)
+    setActionLoading(false);
   }
 
   const UserCard = ({ user }: { user: SchoolUser }) => {
@@ -136,9 +133,9 @@ export function UserManagement() {
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
                   <RoleBadge role={user.role} />
-                  {user.className && (
+                  {user.role === "student" && user.studentProfile?.className && (
                     <Badge variant="outline" className="text-xs">
-                      {user.className}
+                      {user.studentProfile.className}
                     </Badge>
                   )}
                 </div>
@@ -235,7 +232,7 @@ export function UserManagement() {
             className="pl-10"
           />
         </div>
-        <Select value={roleFilter} onValueChange={(value: any) => setRoleFilter(value)}>
+        <Select value={roleFilter} onValueChange={(value: UserRole | "all") => setRoleFilter(value)}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filtrer par rôle" />
           </SelectTrigger>
@@ -265,7 +262,7 @@ export function UserManagement() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifier l'utilisateur</DialogTitle>
+            <DialogTitle>Modifier l&apos;utilisateur</DialogTitle>
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
@@ -288,7 +285,7 @@ export function UserManagement() {
 
               <div>
                 <label className="text-sm font-medium">Rôle</label>
-                <Select value={editingRole} onValueChange={(value: any) => setEditingRole(value)}>
+                <Select value={editingRole} onValueChange={(value: "student" | "teacher" | "admin") => setEditingRole(value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -302,7 +299,7 @@ export function UserManagement() {
 
               <Alert>
                 <AlertDescription>
-                  Attention: Changer le rôle d'un utilisateur peut affecter ses permissions et son accès aux
+                  Attention: Changer le rôle d&apos;un utilisateur peut affecter ses permissions et son accès aux
                   fonctionnalités.
                 </AlertDescription>
               </Alert>

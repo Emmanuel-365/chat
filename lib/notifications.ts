@@ -12,21 +12,7 @@ import {
 } from "firebase/firestore"
 import { db } from "./firebase"
 
-export interface Notification {
-  id: string
-  userId: string
-  type: "message" | "class_announcement" | "system" | "mention"
-  title: string
-  message: string
-  isRead: boolean
-  createdAt: Date
-  data?: {
-    messageId?: string
-    senderId?: string
-    senderName?: string
-    conversationId?: string
-  }
-}
+import type { Notification } from "@/types/user";
 
 export const createNotification = async (
   userId: string,

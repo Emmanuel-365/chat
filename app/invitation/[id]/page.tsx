@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, CheckCircle, AlertCircle, UserCheck } from "lucide-react"
-import { getInvitation, acceptInvitation, type PendingInvitation } from "@/lib/invitations"
-import { RoleBadge } from "@/components/auth/role-badge"
+import { Eye, EyeOff, CheckCircle, AlertCircle, UserCheck } from "lucide-react";
+import { getInvitation, acceptInvitation } from "@/lib/invitations";
+import type { Invitation as PendingInvitation } from "@/types/user";
+import { RoleBadge } from "@/components/auth/role-badge";
+import zxcvbn from "zxcvbn";
 
 export default function InvitationPage() {
   const params = useParams()
@@ -23,81 +25,81 @@ export default function InvitationPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
     const loadInvitation = async () => {
-      if (!invitationId) return
+      if (!invitationId) return;
 
-      const invitationData = await getInvitation(invitationId)
+      try {
+        const invitationData = await getInvitation(invitationId);
 
-      if (!invitationData) {
-        setError("Invitation non trouvée ou expirée")
-      } else if (invitationData.status !== "pending") {
-        setError("Cette invitation a déjà été utilisée")
-      } else if (new Date() > new Date(invitationData.expiresAt)) {
-        setError("Cette invitation a expiré")
-      } else {
-        setInvitation(invitationData)
+        if (!invitationData) {
+          setError("Invitation non trouvée ou expirée");
+        } else if (invitationData.status !== "pending") {
+          setError("Cette invitation a déjà été utilisée");
+        } else if (invitationData.expiresAt && new Date() > new Date(invitationData.expiresAt)) {
+          setError("Cette invitation a expiré");
+        } else {
+          setInvitation(invitationData);
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       }
 
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    loadInvitation()
-  }, [invitationId])
+    loadInvitation();
+  }, [invitationId]);
 
-  const validatePassword = (pwd: string): string | null => {
-    if (pwd.length < 8) {
-      return "Le mot de passe doit contenir au moins 8 caractères"
-    }
-    if (!/(?=.*[a-z])/.test(pwd)) {
-      return "Le mot de passe doit contenir au moins une lettre minuscule"
-    }
-    if (!/(?=.*[A-Z])/.test(pwd)) {
-      return "Le mot de passe doit contenir au moins une lettre majuscule"
-    }
-    if (!/(?=.*\d)/.test(pwd)) {
-      return "Le mot de passe doit contenir au moins un chiffre"
-    }
-    return null
-  }
+  const handlePasswordChange = (pwd: string) => {
+    setPassword(pwd);
+    const strength = zxcvbn(pwd).score;
+    setPasswordStrength(strength);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!invitation) return
-
-    // Validation
-    const passwordError = validatePassword(password)
-    if (passwordError) {
-      setError(passwordError)
-      return
-    }
+    if (!invitation) return;
 
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas")
-      return
+      setError("Les mots de passe ne correspondent pas");
+      return;
     }
 
-    setSubmitting(true)
-    setError(null)
+    if (passwordStrength < 2) {
+      setError("Le mot de passe est trop faible.");
+      return;
+    }
 
-    const result = await acceptInvitation(invitationId, password)
+    setSubmitting(true);
+    setError(null);
 
-    if (result.success) {
-      setSuccess(true)
+    try {
+      await acceptInvitation(invitationId);
+      setSuccess(true);
       setTimeout(() => {
-        router.push("/login")
-      }, 3000)
-    } else {
-      setError(result.error || "Erreur lors de la création du compte")
+        router.push("/login");
+      }, 3000);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false)
-  }
+  };
 
   if (loading) {
     return (
@@ -172,13 +174,29 @@ export default function InvitationPage() {
                 <span className="text-sm">{invitation.email}</span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Nom d'utilisateur:</span>
+                <span className="text-sm font-medium">Nom d&apos;utilisateur:</span>
                 <span className="text-sm font-mono bg-white px-2 py-1 rounded border">{invitation.username}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Rôle:</span>
                 <RoleBadge role={invitation.role} />
               </div>
+              {invitation.role === "student" && invitation.studentProfile && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Classe:</span>
+                    <span className="text-sm">
+                      {invitation.studentProfile.className || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Niveau:</span>
+                    <span className="text-sm">
+                      {invitation.studentProfile.grade || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -190,7 +208,7 @@ export default function InvitationPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   placeholder="Votre mot de passe"
                   required
                 />
@@ -203,6 +221,12 @@ export default function InvitationPage() {
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div
+                  className={`h-2.5 rounded-full ${["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-green-500", "bg-green-500"][passwordStrength]}`}
+                  style={{ width: `${(passwordStrength / 4) * 100}%` }}
+                ></div>
               </div>
             </div>
 

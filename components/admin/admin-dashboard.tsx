@@ -8,13 +8,13 @@ import { ClassManagement } from "./class-management"
 import { MessageModeration } from "./message-moderation"
 import { SystemSettings } from "./system-settings"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield } from "lucide-react"
+import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, Mail } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 
 export function AdminDashboard() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "classes" | "messages" | "settings">("stats")
+  const [activeTab, setActiveTab] = useState<"stats" | "users" | "classes" | "messages" | "settings" | "invitations">("stats")
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -86,6 +86,15 @@ export function AdminDashboard() {
           >
             <Settings className="h-4 w-4 mr-3" />
             Paramètres Système
+          </Button>
+
+          <Button
+            variant={activeTab === "invitations" ? "default" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => router.push("/admin/invitations")}
+          >
+            <Mail className="h-4 w-4 mr-3" />
+            Invitations
           </Button>
         </div>
 

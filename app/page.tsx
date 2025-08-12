@@ -43,7 +43,7 @@ export default function HomePage() {
               Se connecter
             </Button>
             <Button onClick={() => router.push("/register")} variant="outline" size="lg">
-              S'inscrire
+              S&apos;inscrire
             </Button>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function HomePage() {
               <CardTitle>Annonces</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>Diffusez des informations importantes à toute l'école</CardDescription>
+              <CardDescription>Diffusez des informations importantes à toute l&apos;école</CardDescription>
             </CardContent>
           </Card>
 
@@ -85,7 +85,7 @@ export default function HomePage() {
               <CardTitle>Sécurisé</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription>Environnement sûr avec contrôle d'accès par rôles</CardDescription>
+              <CardDescription>Environnement sûr avec contrôle d&apos;accès par rôles</CardDescription>
             </CardContent>
           </Card>
         </div>

@@ -8,9 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Trash2, AlertTriangle, MessageCircle, Clock } from "lucide-react"
-import { getRecentMessages, deleteMessage } from "@/lib/admin"
-import { RoleBadge } from "@/components/auth/role-badge"
-import type { Message } from "@/types/user"
+import { getRecentMessages, deleteMessage } from "@/lib/admin";
+import { getUserById } from "@/lib/contacts";
+import { RoleBadge } from "@/components/auth/role-badge";
+import type { Message } from "@/types/user";
 
 export function MessageModeration() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -19,27 +20,33 @@ export function MessageModeration() {
 
   useEffect(() => {
     const loadMessages = async () => {
-      const recentMessages = await getRecentMessages(100)
-      setMessages(recentMessages)
-      setLoading(false)
-    }
+      const recentMessages = await getRecentMessages(100);
+      const messagesWithSenderInfo = await Promise.all(
+        recentMessages.map(async (message) => {
+          const sender = await getUserById(message.senderId);
+          return {
+            ...message,
+            senderName: sender?.displayName || "Unknown User",
+            senderRole: sender?.role || "student",
+          };
+        })
+      );
+      setMessages(messagesWithSenderInfo);
+      setLoading(false);
+    };
 
-    loadMessages()
-  }, [])
+    loadMessages();
+  }, []);
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
-      return
-    }
-
-    setDeletingId(messageId)
-    const success = await deleteMessage(messageId)
+    setDeletingId(messageId);
+    const success = await deleteMessage(messageId);
 
     if (success) {
-      setMessages(messages.filter((m) => m.id !== messageId))
+      setMessages(messages.filter((m) => m.id !== messageId));
     }
 
-    setDeletingId(null)
+    setDeletingId(null);
   }
 
   const formatTime = (date: Date) => {
@@ -56,7 +63,7 @@ export function MessageModeration() {
   }
 
   const MessageCard = ({ message }: { message: Message }) => {
-    const initials = message.senderName
+    const initials = message.senderDisplayName
       .split(" ")
       .map((name) => name[0])
       .join("")
@@ -72,7 +79,7 @@ export function MessageModeration() {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2 mb-1">
-                  <span className="font-medium text-sm">{message.senderName}</span>
+                  <span className="font-medium text-sm">{message.senderDisplayName}</span>
                   <RoleBadge role={message.senderRole} />
                   <Badge variant="outline" className="text-xs">
                     {message.type === "direct" ? "Direct" : "Classe"}

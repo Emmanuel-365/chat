@@ -1,78 +1,101 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Search, MessageCircle, Calendar } from "lucide-react"
-import { collection, query, orderBy, getDocs } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { RoleBadge } from "@/components/auth/role-badge"
-import type { Message } from "@/types/user"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Search, MessageCircle, Calendar } from "lucide-react";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { getUserById } from "@/lib/contacts";
+import { RoleBadge } from "@/components/auth/role-badge";
+import type { Message, SchoolUser } from "@/types/user";
 
 interface MessageSearchProps {
-  userId: string
-  onSelectMessage?: (message: Message) => void
+  userId: string;
+  onSelectMessage?: (message: Message) => void;
 }
 
 export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
-  const [open, setOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<Message[]>([])
-  const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const searchMessages = async (term: string) => {
+  const searchMessages = useCallback(async (term: string) => {
     if (!term.trim()) {
-      setSearchResults([])
-      return
+      setSearchResults([]);
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       // Recherche dans les messages où l'utilisateur est impliqué
-      const messagesQuery = query(collection(db, "messages"), orderBy("timestamp", "desc"))
+      const messagesQuery = query(
+        collection(db, "messages"),
+        orderBy("timestamp", "desc")
+      );
 
-      const snapshot = await getDocs(messagesQuery)
-      const messages: Message[] = []
+      const snapshot = await getDocs(messagesQuery);
+      const messages: Message[] = [];
+      const userCache = new Map<string, SchoolUser>();
 
-      snapshot.forEach((doc) => {
-        const data = doc.data()
+      const getCachedUser = async (uid: string) => {
+        if (userCache.has(uid)) {
+          return userCache.get(uid);
+        }
+        const user = await getUserById(uid);
+        if (user) {
+          userCache.set(uid, user);
+        }
+        return user;
+      };
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
         const message = {
           id: doc.id,
           ...data,
           timestamp: data.timestamp?.toDate() || new Date(),
-        } as Message
+        } as Message;
 
         // Vérifier si l'utilisateur est impliqué et si le message contient le terme de recherche
         const isInvolved =
-          message.senderId === userId || message.recipientId === userId || (message.type === "class" && message.classId)
+          message.senderId === userId ||
+          message.recipientId === userId ||
+          (message.type === "class" && message.classId);
 
-        const containsSearchTerm = message.content.toLowerCase().includes(term.toLowerCase())
+        const containsSearchTerm = message.content
+          .toLowerCase()
+          .includes(term.toLowerCase());
 
         if (isInvolved && containsSearchTerm) {
-          messages.push(message)
+          const sender = await getCachedUser(message.senderId);
+          messages.push({
+            ...message,
+            senderDisplayName: sender?.displayName || "Unknown User",
+            senderRole: sender?.role || "student",
+          });
         }
-      })
+      }
 
-      setSearchResults(messages.slice(0, 50)) // Limiter à 50 résultats
+      setSearchResults(messages.slice(0, 50)); // Limiter à 50 résultats
     } catch (error) {
-      console.error("Erreur lors de la recherche:", error)
+      console.error("Erreur lors de la recherche:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, [userId]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      searchMessages(searchTerm)
-    }, 300)
+      searchMessages(searchTerm);
+    }, 300);
 
-    return () => clearTimeout(debounceTimer)
-  }, [searchTerm, userId])
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, userId, searchMessages]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleDateString("fr-FR", {
@@ -81,14 +104,14 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const highlightSearchTerm = (text: string, term: string) => {
-    if (!term) return text
+    if (!term) return text;
 
-    const regex = new RegExp(`(${term})`, "gi")
-    const parts = text.split(regex)
+    const regex = new RegExp(`(${term})`, "gi");
+    const parts = text.split(regex);
 
     return parts.map((part, index) =>
       regex.test(part) ? (
@@ -97,9 +120,9 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
         </mark>
       ) : (
         part
-      ),
-    )
-  }
+      )
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -155,7 +178,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
                 {searchTerm ? (
                   <>
                     <MessageCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Aucun message trouvé pour "{searchTerm}"</p>
+                    <p className="text-sm text-muted-foreground">Aucun message trouvé pour &quot;{searchTerm}&quot;</p>
                   </>
                 ) : (
                   <>
@@ -167,19 +190,19 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
             ) : (
               <div className="space-y-2">
                 {searchResults.map((message) => {
-                  const initials = message.senderName
+                  const initials = message.senderDisplayName
                     .split(" ")
                     .map((name) => name[0])
                     .join("")
-                    .toUpperCase()
+                    .toUpperCase();
 
                   return (
                     <Card
                       key={message.id}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => {
-                        onSelectMessage?.(message)
-                        setOpen(false)
+                        onSelectMessage?.(message);
+                        setOpen(false);
                       }}
                     >
                       <CardContent className="p-3">
@@ -189,7 +212,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-1">
-                              <span className="font-medium text-sm">{message.senderName}</span>
+                              <span className="font-medium text-sm">{message.senderDisplayName}</span>
                               <RoleBadge role={message.senderRole} />
                               <Badge variant="outline" className="text-xs">
                                 {message.type === "direct" ? "Direct" : "Classe"}
@@ -214,7 +237,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
                         </div>
                       </CardContent>
                     </Card>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -230,5 +253,5 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

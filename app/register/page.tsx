@@ -11,9 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Eye, EyeOff, MessageCircle } from "lucide-react"
-import type { UserRole } from "@/types/user"
+import { Eye, EyeOff, MessageCircle } from "lucide-react";
+import zxcvbn from "zxcvbn";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -21,51 +20,60 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     displayName: "",
-    role: "" as UserRole,
-    classId: "",
-    className: "",
-    grade: "",
+    invitationId: "",
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+  const handlePasswordChange = (password: string) => {
+    handleInputChange("password", password);
+    const strength = zxcvbn(password).score;
+    setPasswordStrength(strength);
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas")
-      setLoading(false)
-      return
+      setError("Les mots de passe ne correspondent pas");
+      setLoading(false);
+      return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères")
-      setLoading(false)
-      return
+    if (passwordStrength < 2) {
+      setError("Password is too weak.");
+      setLoading(false);
+      return;
     }
 
-    const { user, error: authError } = await createAccount(
-      formData.email,
-      formData.password,
-      formData.displayName,
-      formData.role,
-      formData.classId || undefined,
-      formData.className || undefined,
-      formData.grade || undefined,
-    )
+    try {
+      const { user } = await createAccount(
+        formData.email,
+        formData.password,
+        formData.displayName,
+        formData.invitationId
+      );
 
-    if (authError) {
-      setError(authError)
-      setLoading(false)
-    } else if (user) {
-      router.push("/dashboard")
+      if (user) {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred during registration.");
+      }
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -92,6 +100,18 @@ export default function RegisterPage() {
             )}
 
             <div className="space-y-2">
+              <Label htmlFor="invitationId">Code d&apos;invitation</Label>
+              <Input
+                id="invitationId"
+                type="text"
+                placeholder="Votre code d'invitation"
+                value={formData.invitationId}
+                onChange={(e) => handleInputChange("invitationId", e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="displayName">Nom complet</Label>
               <Input
                 id="displayName"
@@ -116,53 +136,6 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Rôle</Label>
-              <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez votre rôle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="student">Étudiant</SelectItem>
-                  <SelectItem value="teacher">Professeur</SelectItem>
-                  <SelectItem value="admin">Administrateur</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(formData.role === "student" || formData.role === "teacher") && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="className">Classe</Label>
-                  <Input
-                    id="className"
-                    type="text"
-                    placeholder="6ème A, Terminale S, etc."
-                    value={formData.className}
-                    onChange={(e) => handleInputChange("className", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="grade">Niveau</Label>
-                  <Select value={formData.grade} onValueChange={(value) => handleInputChange("grade", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez le niveau" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="6eme">6ème</SelectItem>
-                      <SelectItem value="5eme">5ème</SelectItem>
-                      <SelectItem value="4eme">4ème</SelectItem>
-                      <SelectItem value="3eme">3ème</SelectItem>
-                      <SelectItem value="seconde">Seconde</SelectItem>
-                      <SelectItem value="premiere">Première</SelectItem>
-                      <SelectItem value="terminale">Terminale</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
               <Label htmlFor="password">Mot de passe</Label>
               <div className="relative">
                 <Input
@@ -170,7 +143,7 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Au moins 6 caractères"
                   value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
                   required
                 />
                 <Button
@@ -182,6 +155,12 @@ export default function RegisterPage() {
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                <div
+                  className={`h-2.5 rounded-full ${["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-green-500", "bg-green-500"][passwordStrength]}`}
+                  style={{ width: `${(passwordStrength / 4) * 100}%` }}
+                ></div>
               </div>
             </div>
 

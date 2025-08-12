@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Users, MessageCircle, BookOpen } from "lucide-react"
 import { getClasses, getClassesByTeacher, createClass } from "@/lib/classes"
-import { getUsersByClass } from "@/lib/contacts"
+import { getUsersByClass, getTeacherByClass } from "@/lib/contacts"
 import type { Class, SchoolUser } from "@/types/user"
 
 interface ClassesTabProps {
@@ -49,28 +49,46 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
   }, [currentUser])
 
   const handleCreateClass = async () => {
-    if (!newClassName.trim() || !newClassGrade.trim()) return
+    if (!newClassName.trim() || !newClassGrade.trim()) return;
 
-    setCreating(true)
-    const { success } = await createClass(newClassName.trim(), newClassGrade, currentUser.uid, currentUser.displayName)
+    setCreating(true);
+    const { success, classId } = await createClass(
+      newClassName.trim(),
+      newClassGrade,
+      currentUser.uid
+    );
 
     if (success) {
-      setNewClassName("")
-      setNewClassGrade("")
-      setShowCreateDialog(false)
+      setNewClassName("");
+      setNewClassGrade("");
+      setShowCreateDialog(false);
 
       // Recharger les classes
-      const updatedClasses =
-        currentUser.role === "admin" ? await getClasses() : await getClassesByTeacher(currentUser.uid)
-      setClasses(updatedClasses)
+      const newClass = {
+        id: classId!,
+        name: newClassName.trim(),
+        grade: newClassGrade,
+        teacherId: currentUser.uid,
+        createdAt: new Date(),
+      };
+      setClasses((prevClasses) => [...prevClasses, newClass]);
     }
 
-    setCreating(false)
-  }
+    setCreating(false);
+  };
 
   const ClassCard = ({ classData }: { classData: Class }) => {
-    const [students, setStudents] = useState<SchoolUser[]>([])
-    const [studentsLoaded, setStudentsLoaded] = useState(false)
+    const [students, setStudents] = useState<SchoolUser[]>([]);
+    const [teacher, setTeacher] = useState<SchoolUser | null>(null);
+    const [studentsLoaded, setStudentsLoaded] = useState(false);
+
+    useEffect(() => {
+      const getTeacher = async () => {
+        const teacherData = await getTeacherByClass(classData.id);
+        setTeacher(teacherData);
+      };
+      getTeacher();
+    }, [classData.id]);
 
     const loadStudents = async () => {
       if (!studentsLoaded) {
@@ -94,15 +112,7 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Professeur:</span>
-            <span className="font-medium">{classData.teacherName}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Étudiants:</span>
-            <div className="flex items-center space-x-1">
-              <Users className="h-4 w-4" />
-              <span>{classData.studentIds?.length || 0}</span>
-            </div>
+            <span className="font-medium">{teacher?.displayName}</span>
           </div>
 
           <div className="flex gap-2 pt-2">

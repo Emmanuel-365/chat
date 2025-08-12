@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own user data
+    match /users/{userId} {
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
+    }
+
+    // Messages
+    match /messages/{messageId} {
+      allow read, write: if canAccessMessage(request.auth.uid, resource.data);
+    }
+
+    // Conversations
+    match /conversations/{conversationId} {
+      allow read, write: if canAccessConversation(request.auth.uid, resource.data);
+    }
+
+    // Invitations - only admins can create, read, update, delete
+    match /invitations/{invitationId} {
+      allow read, create, update, delete: if isAdmin(request.auth.uid);
+    }
+
+    // Classes - only admins can create, read, update, delete
+    match /classes/{classId} {
+      allow read, create, update, delete: if isAdmin(request.auth.uid);
+    }
+
+    // Helper functions
+    function isAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
+    }
+
+    function isParticipant(userId, participants) {
+      return userId in participants;
+    }
+
+    function canAccessMessage(userId, messageData) {
+      // Allow if user is sender or recipient in direct message
+      if (messageData.type == 'direct') {
+        return userId == messageData.senderId || userId == messageData.recipientId;
+      }
+      // Allow if user is part of the class in class message
+      if (messageData.type == 'class') {
+        return exists(/databases/$(database)/documents/users/$(userId)) && get(/databases/$(database)/documents/users/$(userId)).data.studentProfile.classId == messageData.classId;
+      }
+      return false;
+    }
+
+    function canAccessConversation(userId, conversationData) {
+      return userId in conversationData.participants;
+    }
+  }
+}

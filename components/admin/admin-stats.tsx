@@ -96,7 +96,7 @@ export function AdminStats() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Tableau de Bord Administrateur</h1>
-          <p className="text-muted-foreground">Vue d'ensemble de votre plateforme EcoleChat</p>
+          <p className="text-muted-foreground">Vue d&apos;ensemble de votre plateforme EcoleChat</p>
         </div>
         <div className="flex items-center space-x-2">
           <Activity className="h-4 w-4 text-green-600" />
@@ -138,7 +138,7 @@ export function AdminStats() {
                 <Badge variant="secondary">{stats.activeUsers}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Taux d'activité</span>
+                <span className="text-sm text-muted-foreground">Taux d&apos;activité</span>
                 <Badge variant="secondary">
                   {stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0}%
                 </Badge>

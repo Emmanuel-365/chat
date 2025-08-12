@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Bell, Check, MessageCircle, Megaphone, Settings, User } from "lucide-react"
 import { useNotifications } from "@/hooks/use-notifications"
 import { markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notifications"
-import type { Notification } from "@/lib/notifications"
+import type { Notification } from "@/types/user";
 
 interface NotificationCenterProps {
   userId: string

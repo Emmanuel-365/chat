@@ -23,7 +23,11 @@ export function UserProfile({ user }: UserProfileProps) {
         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.displayName}</p>
         <div className="flex items-center space-x-2">
           <RoleBadge role={user.role} />
-          {user.className && <span className="text-xs text-muted-foreground">{user.className}</span>}
+          {user.role === "student" && user.studentProfile?.className && (
+            <span className="text-xs text-muted-foreground">
+              {user.studentProfile.className}
+            </span>
+          )}
         </div>
       </div>
     </div>

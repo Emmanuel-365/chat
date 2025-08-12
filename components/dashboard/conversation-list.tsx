@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Plus } from "lucide-react"
-import { getConversations, type Conversation } from "@/lib/messages"
+import { getConversations } from "@/lib/messages"
+import type { Conversation } from "@/types/user"
 
 interface ConversationListProps {
   userId: string

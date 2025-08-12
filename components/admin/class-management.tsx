@@ -17,7 +17,6 @@ import type { Class, SchoolUser } from "@/types/user"
 export function ClassManagement() {
   const [classes, setClasses] = useState<Class[]>([])
   const [teachers, setTeachers] = useState<SchoolUser[]>([])
-  const [students, setStudents] = useState<SchoolUser[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showStudentsDialog, setShowStudentsDialog] = useState(false)
@@ -34,16 +33,14 @@ export function ClassManagement() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
-      const [classesData, teachersData, studentsData] = await Promise.all([
+      const [classesData, teachersData] = await Promise.all([
         getClasses(),
         getUsersByRole("teacher"),
-        getUsersByRole("student"),
-      ])
+      ]);
 
-      setClasses(classesData)
-      setTeachers(teachersData)
-      setStudents(studentsData)
-      setLoading(false)
+      setClasses(classesData);
+      setTeachers(teachersData);
+      setLoading(false);
     }
 
     loadData()
@@ -52,15 +49,11 @@ export function ClassManagement() {
   const handleCreateClass = async () => {
     if (!newClassName.trim() || !newClassGrade.trim() || !selectedTeacherId) return
 
-    const selectedTeacher = teachers.find((t) => t.uid === selectedTeacherId)
-    if (!selectedTeacher) return
-
     setCreating(true)
     const { success } = await createClass(
       newClassName.trim(),
       newClassGrade,
-      selectedTeacherId,
-      selectedTeacher.displayName,
+      selectedTeacherId
     )
 
     if (success) {
@@ -78,14 +71,10 @@ export function ClassManagement() {
   }
 
   const handleDeleteClass = async (classData: Class) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer la classe ${classData.name} ?`)) {
-      return
-    }
-
-    const success = await deleteClass(classData.id)
+    const success = await deleteClass(classData.id);
     if (success) {
-      const updatedClasses = classes.filter((c) => c.id !== classData.id)
-      setClasses(updatedClasses)
+      const updatedClasses = classes.filter((c) => c.id !== classData.id);
+      setClasses(updatedClasses);
     }
   }
 
@@ -97,7 +86,7 @@ export function ClassManagement() {
     ])
 
     setClassStudents(classStudentsData)
-    setAvailableStudents(allStudents.filter((s) => !s.classId || s.classId !== classData.id))
+    setAvailableStudents(allStudents.filter((s) => !s.studentProfile?.classId || s.studentProfile?.classId !== classData.id))
     setShowStudentsDialog(true)
   }
 
@@ -113,14 +102,14 @@ export function ClassManagement() {
       ])
 
       setClassStudents(updatedClassStudents)
-      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.classId || s.classId !== selectedClass.id))
+      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.studentProfile?.classId || s.studentProfile?.classId !== selectedClass.id))
     }
   }
 
   const handleRemoveStudent = async (studentId: string) => {
     if (!selectedClass) return
 
-    const success = await removeStudentFromClass(selectedClass.id, studentId)
+    const success = await removeStudentFromClass(studentId)
     if (success) {
       // Recharger les données
       const [updatedClassStudents, updatedAvailableStudents] = await Promise.all([
@@ -129,11 +118,13 @@ export function ClassManagement() {
       ])
 
       setClassStudents(updatedClassStudents)
-      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.classId || s.classId !== selectedClass.id))
+      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.studentProfile?.classId || s.studentProfile?.classId !== selectedClass.id))
     }
   }
 
-  const ClassCard = ({ classData }: { classData: Class }) => (
+  const ClassCard = ({ classData }: { classData: Class }) => {
+    const teacher = teachers.find(t => t.uid === classData.teacherId)
+    return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -147,15 +138,7 @@ export function ClassManagement() {
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Professeur:</span>
-          <span className="font-medium">{classData.teacherName}</span>
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Étudiants:</span>
-          <div className="flex items-center space-x-1">
-            <Users className="h-4 w-4" />
-            <span>{classData.studentIds?.length || 0}</span>
-          </div>
+          <span className="font-medium">{teacher?.displayName}</span>
         </div>
 
         <div className="flex items-center justify-between text-sm">
@@ -174,7 +157,7 @@ export function ClassManagement() {
         </div>
       </CardContent>
     </Card>
-  )
+  )}
 
   if (loading) {
     return (
@@ -327,9 +310,9 @@ export function ClassManagement() {
                     <div key={student.uid} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <div>
                         <span className="text-sm">{student.displayName}</span>
-                        {student.className && (
+                        {student.studentProfile?.className && (
                           <Badge variant="outline" className="ml-2 text-xs">
-                            {student.className}
+                            {student.studentProfile.className}
                           </Badge>
                         )}
                       </div>

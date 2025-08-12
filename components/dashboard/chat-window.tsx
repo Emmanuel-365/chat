@@ -8,73 +8,98 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, MoreVertical } from "lucide-react"
-import { sendMessage, subscribeToMessages, type Message } from "@/lib/messages"
-import type { SchoolUser } from "@/types/user"
+import { sendMessage, subscribeToMessages } from "@/lib/messages";
+import type { Message } from "@/types/user";
+import { getUserById } from "@/lib/contacts";
+import type { SchoolUser } from "@/types/user";
 
 interface ChatWindowProps {
-  conversationId: string
-  currentUser: SchoolUser
+  conversationId: string;
+  currentUser: SchoolUser;
 }
 
 export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState("")
-  const [loading, setLoading] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [recipient, setRecipient] = useState<SchoolUser | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Déterminer le type de conversation et les paramètres
-  const isDirectMessage = !conversationId.startsWith("class-")
-  const recipientId = isDirectMessage ? conversationId.split("-").find((id) => id !== currentUser.uid) : undefined
-  const classId = !isDirectMessage ? conversationId.replace("class-", "") : undefined
+  const isDirectMessage = !conversationId.startsWith("class-");
+  const recipientId = isDirectMessage
+    ? conversationId.split("-").find((id) => id !== currentUser.uid)
+    : undefined;
+  const classId = !isDirectMessage
+    ? conversationId.replace("class-", "")
+    : undefined;
 
   useEffect(() => {
-    const unsubscribe = subscribeToMessages(currentUser.uid, recipientId, classId, (newMessages) => {
-      setMessages(newMessages)
-      // Scroll to bottom when new messages arrive
-      setTimeout(() => {
-        if (scrollAreaRef.current) {
-          scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
-        }
-      }, 100)
-    })
-
-    return () => unsubscribe()
-  }, [currentUser.uid, recipientId, classId])
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || loading) return
-
-    setLoading(true)
-    const { success } = await sendMessage(
+    const unsubscribe = subscribeToMessages(
       currentUser.uid,
-      currentUser.displayName,
-      currentUser.role,
-      newMessage.trim(),
       recipientId,
       classId,
-    )
+      (newMessages) => {
+        setMessages(newMessages);
+        // Scroll to bottom when new messages arrive
+        setTimeout(() => {
+          if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTop =
+              scrollAreaRef.current.scrollHeight;
+          }
+        }, 100);
+      }
+    );
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [currentUser.uid, recipientId, classId]);
+
+  useEffect(() => {
+    const fetchRecipient = async () => {
+      if (recipientId) {
+        const user = await getUserById(recipientId);
+        setRecipient(user);
+      }
+    };
+    fetchRecipient();
+  }, [recipientId]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || loading) return;
+
+    setLoading(true);
+    const { success } = await sendMessage(
+      currentUser,
+      newMessage.trim(),
+      recipientId,
+      classId
+    );
 
     if (success) {
-      setNewMessage("")
+      setNewMessage("");
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const formatMessageTime = (date: Date) => {
     return date.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const getConversationTitle = () => {
     if (isDirectMessage) {
-      return recipientId || "Conversation directe"
+      return recipient?.displayName || "Conversation directe";
     } else {
-      return `Classe ${classId}`
+      return `Classe ${classId}`;
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -120,7 +145,7 @@ export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
                         : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
                     }`}
                   >
-                    {!isOwnMessage && <p className="text-xs font-medium mb-1 opacity-70">{message.senderName}</p>}
+                    {!isOwnMessage && message.senderDisplayName && <p className="text-xs font-medium mb-1 opacity-70">{message.senderDisplayName}</p>}
                     <p className="text-sm">{message.content}</p>
                     <p className={`text-xs mt-1 ${isOwnMessage ? "text-blue-100" : "text-muted-foreground"}`}>
                       {formatMessageTime(message.timestamp)}

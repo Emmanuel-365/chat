@@ -18,11 +18,11 @@ export default function UnauthorizedPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-red-600">Accès non autorisé</CardTitle>
-          <CardDescription>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</CardDescription>
+          <CardDescription>Vous n&apos;avez pas les permissions nécessaires pour accéder à cette page.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Si vous pensez qu'il s'agit d'une erreur, contactez votre administrateur.
+            Si vous pensez qu&apos;il s&apos;agit d&apos;une erreur, contactez votre administrateur.
           </p>
           <div className="flex gap-2 justify-center">
             <Button onClick={() => router.back()} variant="outline">

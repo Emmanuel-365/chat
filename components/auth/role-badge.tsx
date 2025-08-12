@@ -10,6 +10,7 @@ export function RoleBadge({ role }: RoleBadgeProps) {
     student: { label: "Étudiant", variant: "secondary" as const },
     teacher: { label: "Professeur", variant: "default" as const },
     admin: { label: "Administrateur", variant: "destructive" as const },
+    staff: { label: "Personnel", variant: "outline" as const },
   }
 
   const config = roleConfig[role]

@@ -7,171 +7,153 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   type Unsubscribe,
-} from "firebase/firestore"
-import { db } from "./firebase"
-import type { Message } from "@/types/user"
-
-export interface Conversation {
-  id: string
-  participants: string[]
-  participantNames: string[]
-  lastMessage?: string
-  lastMessageTime?: Date
-  unreadCount: number
-  type: "direct" | "class"
-  className?: string
-}
+  setDoc,
+} from "firebase/firestore";
+import { db } from "./firebase";
+import type { Message, SchoolUser, Conversation } from "@/types/user";
+import { getUserById } from "./contacts";
 
 export const sendMessage = async (
-  senderId: string,
-  senderName: string,
-  senderRole: "student" | "teacher" | "admin",
+  sender: SchoolUser,
   content: string,
   recipientId?: string,
-  classId?: string,
+  classId?: string
 ) => {
   try {
     const messageData = {
-      senderId,
-      senderName,
-      senderRole,
+      senderId: sender.uid,
+      senderDisplayName: sender.displayName,
+      senderRole: sender.role,
       content,
       timestamp: serverTimestamp(),
       isRead: false,
       type: recipientId ? "direct" : "class",
       ...(recipientId && { recipientId }),
       ...(classId && { classId }),
+    };
+
+    await addDoc(collection(db, "messages"), messageData);
+
+    // Update conversation
+    let conversationId: string;
+    if (recipientId) {
+      conversationId = [sender.uid, recipientId].sort().join("-");
+    } else {
+      conversationId = `class-${classId}`;
     }
 
-    await addDoc(collection(db, "messages"), messageData)
-    return { success: true, error: null }
-  } catch (error: any) {
-    return { success: false, error: error.message }
+    const conversationRef = doc(db, "conversations", conversationId);
+    const conversationSnap = await getDoc(conversationRef);
+
+    if (conversationSnap.exists()) {
+      await updateDoc(conversationRef, {
+        lastMessage: content,
+        lastMessageTime: serverTimestamp(),
+        unreadCount: conversationSnap.data().unreadCount + 1,
+      });
+    } else {
+      const recipient = recipientId ? await getUserById(recipientId) : null;
+      const conversationData = {
+        participants: recipientId ? [sender.uid, recipientId] : [sender.uid],
+        participantNames: recipientId
+          ? [sender.displayName, recipient?.displayName]
+          : [sender.displayName],
+        lastMessage: content,
+        lastMessageTime: serverTimestamp(),
+        unreadCount: 1,
+        type: recipientId ? "direct" : "class",
+        ...(classId && { className: classId }),
+      };
+      await setDoc(conversationRef, conversationData);
+    }
+
+    return { success: true, error: null };
+  } catch (error: unknown) {
+    let errorMessage = "An unknown error occurred.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return { success: false, error: errorMessage };
   }
-}
+};
 
 export const subscribeToMessages = (
   userId: string,
   recipientId?: string,
   classId?: string,
-  callback: (messages: Message[]) => void,
-): Unsubscribe => {
-  let q
+  callback?: (messages: Message[]) => void
+): Unsubscribe | undefined => {
+  let q;
 
   if (recipientId) {
-    // Messages directs entre deux utilisateurs
-    q = query(collection(db, "messages"), where("type", "==", "direct"), orderBy("timestamp", "asc"))
+    // Direct messages between two users
+    const conversationId = [userId, recipientId].sort().join("-");
+    q = query(
+      collection(db, "messages"),
+      where("type", "==", "direct"),
+      where("conversationId", "==", conversationId),
+      orderBy("timestamp", "asc")
+    );
   } else if (classId) {
-    // Messages de classe
+    // Class messages
     q = query(
       collection(db, "messages"),
       where("classId", "==", classId),
       where("type", "==", "class"),
-      orderBy("timestamp", "asc"),
-    )
+      orderBy("timestamp", "asc")
+    );
   } else {
-    // Tous les messages pour l'utilisateur
-    q = query(collection(db, "messages"), orderBy("timestamp", "desc"))
+    return;
   }
 
   return onSnapshot(q, (snapshot) => {
-    const messages: Message[] = []
+    const messages: Message[] = [];
     snapshot.forEach((doc) => {
-      const data = doc.data()
-
-      // Filtrer les messages directs pour l'utilisateur actuel
-      if (recipientId) {
-        if (
-          (data.senderId === userId && data.recipientId === recipientId) ||
-          (data.senderId === recipientId && data.recipientId === userId)
-        ) {
-          messages.push({
-            id: doc.id,
-            ...data,
-            timestamp: data.timestamp?.toDate() || new Date(),
-          } as Message)
-        }
-      } else {
-        messages.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate() || new Date(),
-        } as Message)
-      }
-    })
-    callback(messages)
-  })
-}
-
-export const markMessageAsRead = async (messageId: string) => {
-  try {
-    await updateDoc(doc(db, "messages", messageId), {
-      isRead: true,
-    })
-  } catch (error) {
-    console.error("Erreur lors du marquage du message comme lu:", error)
-  }
-}
+      const data = doc.data();
+      messages.push({
+        id: doc.id,
+        ...data,
+        timestamp: data.timestamp?.toDate() || new Date(),
+      } as Message);
+    });
+    if (callback) {
+      callback(messages);
+    }
+  });
+};
 
 export const getConversations = async (userId: string): Promise<Conversation[]> => {
   try {
-    // Récupérer tous les messages où l'utilisateur est impliqué
-    const messagesQuery = query(collection(db, "messages"), orderBy("timestamp", "desc"))
+    const q = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", userId)
+    );
+    const snapshot = await getDocs(q);
 
-    const snapshot = await getDocs(messagesQuery)
-    const conversations = new Map<string, Conversation>()
-
-    snapshot.forEach((doc) => {
-      const message = { id: doc.id, ...doc.data() } as Message
-
-      // Vérifier si l'utilisateur est impliqué dans ce message
-      const isInvolved =
-        message.senderId === userId || message.recipientId === userId || (message.type === "class" && message.classId)
-
-      if (isInvolved) {
-        let conversationId: string
-        let participants: string[]
-        let participantNames: string[]
-        let type: "direct" | "class"
-        let className: string | undefined
-
-        if (message.type === "direct") {
-          // Conversation directe
-          const otherUserId = message.senderId === userId ? message.recipientId! : message.senderId
-          conversationId = [userId, otherUserId].sort().join("-")
-          participants = [userId, otherUserId]
-          participantNames = [message.senderName]
-          type = "direct"
-        } else {
-          // Conversation de classe
-          conversationId = `class-${message.classId}`
-          participants = [message.senderId]
-          participantNames = [message.senderName]
-          type = "class"
-          className = message.classId
-        }
-
-        if (!conversations.has(conversationId)) {
-          conversations.set(conversationId, {
-            id: conversationId,
-            participants,
-            participantNames,
-            lastMessage: message.content,
-            lastMessageTime: message.timestamp,
-            unreadCount: message.isRead ? 0 : 1,
-            type,
-            className,
-          })
-        }
-      }
-    })
-
-    return Array.from(conversations.values())
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      lastMessageTime: doc.data().lastMessageTime?.toDate(),
+    })) as Conversation[];
   } catch (error) {
-    console.error("Erreur lors de la récupération des conversations:", error)
-    return []
+    console.error("Erreur lors de la récupération des conversations:", error);
+    return [];
   }
-}
+};
+
+export const markConversationAsRead = async (conversationId: string) => {
+  try {
+    await updateDoc(doc(db, "conversations", conversationId), {
+      unreadCount: 0,
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors du marquage de la conversation comme lue:",
+      error
+    );
+  }
+};

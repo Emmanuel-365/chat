@@ -95,9 +95,9 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
                 <p className="font-medium truncate">{user.displayName}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <RoleBadge role={user.role} />
-                  {user.className && (
+                  {user.role === "student" && user.studentProfile?.className && (
                     <Badge variant="outline" className="text-xs">
-                      {user.className}
+                      {user.studentProfile.className}
                     </Badge>
                   )}
                 </div>

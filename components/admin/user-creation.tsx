@@ -10,11 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { UserPlus, Mail, CheckCircle, AlertCircle } from "lucide-react"
-import { createInvitation } from "@/lib/invitations"
-import { RoleBadge } from "@/components/auth/role-badge"
-import type { UserRole } from "@/types/user"
+import { useAuth } from "@/hooks/use-auth";
+import { createInvitation } from "@/lib/invitations";
+import { RoleBadge } from "@/components/auth/role-badge";
+import type { UserRole, StudentProfile } from "@/types/user";
 
 export function UserCreation() {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     displayName: "",
@@ -23,40 +25,41 @@ export function UserCreation() {
     department: "",
     position: "",
     subject: "",
-  })
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!formData.email || !formData.displayName || !formData.role) {
-      setMessage({ type: "error", text: "Veuillez remplir tous les champs obligatoires" })
-      return
+      setMessage({ type: "error", text: "Veuillez remplir tous les champs obligatoires" });
+      return;
     }
 
-    setLoading(true)
-    setMessage(null)
+    if (!user) {
+      setMessage({ type: "error", text: "Vous devez être connecté pour envoyer une invitation" });
+      return;
+    }
 
-    const additionalData: any = {}
-    if (formData.className) additionalData.className = formData.className
-    if (formData.department) additionalData.department = formData.department
-    if (formData.position) additionalData.position = formData.position
-    if (formData.subject) additionalData.subject = formData.subject
+    setLoading(true);
+    setMessage(null);
+
+    const studentProfile: StudentProfile = {};
+    if (formData.className) studentProfile.className = formData.className;
 
     const result = await createInvitation(
       formData.email,
       formData.role,
-      formData.displayName,
-      "current-admin", // Dans un vrai projet, récupérer l'ID de l'admin connecté
-      additionalData,
-    )
+      user.uid,
+      studentProfile
+    );
 
     if (result.success) {
       setMessage({
         type: "success",
         text: `Invitation envoyée avec succès à ${formData.email}`,
-      })
+      });
       // Réinitialiser le formulaire
       setFormData({
         email: "",
@@ -66,13 +69,13 @@ export function UserCreation() {
         department: "",
         position: "",
         subject: "",
-      })
+      });
     } else {
-      setMessage({ type: "error", text: result.error || "Erreur lors de l'envoi de l'invitation" })
+      setMessage({ type: "error", text: "Erreur lors de l'envoi de l'invitation" });
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -213,12 +216,12 @@ export function UserCreation() {
             <div className="flex items-start gap-3">
               <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Processus d'invitation:</p>
+                <p className="font-medium mb-1">Processus d&apos;invitation:</p>
                 <ul className="space-y-1 text-blue-700">
-                  <li>• Un nom d'utilisateur sera généré automatiquement</li>
-                  <li>• Un email d'invitation sera envoyé à l'utilisateur</li>
-                  <li>• L'utilisateur pourra définir son mot de passe via le lien</li>
-                  <li>• Le lien d'invitation expire dans 7 jours</li>
+                  <li>• Un nom d&apos;utilisateur sera généré automatiquement</li>
+                  <li>• Un email d&apos;invitation sera envoyé à l&apos;utilisateur</li>
+                  <li>• L&apos;utilisateur pourra définir son mot de passe via le lien</li>
+                  <li>• Le lien d&apos;invitation expire dans 7 jours</li>
                 </ul>
               </div>
             </div>
@@ -234,7 +237,7 @@ export function UserCreation() {
             ) : (
               <>
                 <Mail className="h-4 w-4 mr-2" />
-                Envoyer l'invitation
+                Envoyer l&apos;invitation
               </>
             )}
           </Button>

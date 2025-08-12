@@ -1,6 +1,7 @@
 import {
   collection,
   addDoc,
+  getDoc,
   getDocs,
   doc,
   updateDoc,
@@ -9,129 +10,135 @@ import {
   where,
   orderBy,
   serverTimestamp,
-} from "firebase/firestore"
-import { db } from "./firebase"
-import type { Class } from "@/types/user"
+} from "firebase/firestore";
+import { db } from "./firebase";
+import type { Class, SchoolUser } from "@/types/user";
 
 export const createClass = async (
   name: string,
   grade: string,
-  teacherId: string,
-  teacherName: string,
+  teacherId: string
 ): Promise<{ success: boolean; error?: string; classId?: string }> => {
   try {
     const classData = {
       name,
       grade,
       teacherId,
-      teacherName,
-      studentIds: [],
       createdAt: serverTimestamp(),
-    }
+    };
 
-    const docRef = await addDoc(collection(db, "classes"), classData)
-    return { success: true, classId: docRef.id }
-  } catch (error: any) {
-    return { success: false, error: error.message }
+    const docRef = await addDoc(collection(db, "classes"), classData);
+    return { success: true, classId: docRef.id };
+  } catch (error: unknown) {
+    let errorMessage = "An unknown error occurred.";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return { success: false, error: errorMessage };
   }
-}
+};
 
 export const getClasses = async (): Promise<Class[]> => {
   try {
-    const q = query(collection(db, "classes"), orderBy("grade"), orderBy("name"))
-    const snapshot = await getDocs(q)
+    const q = query(collection(db, "classes"), orderBy("grade"), orderBy("name"));
+    const snapshot = await getDocs(q);
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Class[]
+    })) as Class[];
   } catch (error) {
-    console.error("Erreur lors de la récupération des classes:", error)
-    return []
+    console.error("Erreur lors de la récupération des classes:", error);
+    return [];
   }
-}
+};
 
 export const getClassesByTeacher = async (teacherId: string): Promise<Class[]> => {
   try {
-    const q = query(collection(db, "classes"), where("teacherId", "==", teacherId), orderBy("grade"), orderBy("name"))
-    const snapshot = await getDocs(q)
+    const q = query(
+      collection(db, "classes"),
+      where("teacherId", "==", teacherId),
+      orderBy("grade"),
+      orderBy("name")
+    );
+    const snapshot = await getDocs(q);
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Class[]
+    })) as Class[];
   } catch (error) {
-    console.error("Erreur lors de la récupération des classes du professeur:", error)
-    return []
+    console.error(
+      "Erreur lors de la récupération des classes du professeur:",
+      error
+    );
+    return [];
   }
-}
+};
 
-export const addStudentToClass = async (classId: string, studentId: string): Promise<boolean> => {
+export const addStudentToClass = async (
+  classId: string,
+  studentId: string
+): Promise<boolean> => {
   try {
-    const classRef = doc(db, "classes", classId)
-    const classDoc = await getDocs(query(collection(db, "classes"), where("__name__", "==", classId)))
+    const userRef = doc(db, "users", studentId);
+    const userDoc = await getDoc(userRef);
 
-    if (!classDoc.empty) {
-      const classData = classDoc.docs[0].data() as Class
-      const updatedStudentIds = [...(classData.studentIds || []), studentId]
-
-      await updateDoc(classRef, {
-        studentIds: updatedStudentIds,
-      })
-
-      // Mettre à jour l'utilisateur avec la classe
-      const userRef = doc(db, "users", studentId)
-      await updateDoc(userRef, {
-        classId: classId,
-        className: classData.name,
-      })
-
-      return true
+    if (userDoc.exists()) {
+      const userData = userDoc.data() as SchoolUser;
+      if (userData.studentProfile && userData.studentProfile.classId) {
+        console.error("L'étudiant est déjà dans une classe.");
+        return false;
+      }
     }
-    return false
-  } catch (error) {
-    console.error("Erreur lors de l'ajout de l'étudiant à la classe:", error)
-    return false
-  }
-}
 
-export const removeStudentFromClass = async (classId: string, studentId: string): Promise<boolean> => {
+    const classRef = doc(db, "classes", classId);
+    const classDoc = await getDoc(classRef);
+
+    if (classDoc.exists()) {
+      const classData = classDoc.data() as Class;
+      await updateDoc(userRef, {
+        studentProfile: {
+          classId: classId,
+          className: classData.name,
+          grade: classData.grade,
+        },
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Erreur lors de l'ajout de l'étudiant à la classe:", error);
+    return false;
+  }
+};
+
+export const removeStudentFromClass = async (
+  studentId: string
+): Promise<boolean> => {
   try {
-    const classRef = doc(db, "classes", classId)
-    const classDoc = await getDocs(query(collection(db, "classes"), where("__name__", "==", classId)))
-
-    if (!classDoc.empty) {
-      const classData = classDoc.docs[0].data() as Class
-      const updatedStudentIds = (classData.studentIds || []).filter((id) => id !== studentId)
-
-      await updateDoc(classRef, {
-        studentIds: updatedStudentIds,
-      })
-
-      // Retirer la classe de l'utilisateur
-      const userRef = doc(db, "users", studentId)
-      await updateDoc(userRef, {
-        classId: null,
-        className: null,
-      })
-
-      return true
-    }
-    return false
+    const userRef = doc(db, "users", studentId);
+    await updateDoc(userRef, {
+      studentProfile: null,
+    });
+    return true;
   } catch (error) {
-    console.error("Erreur lors de la suppression de l'étudiant de la classe:", error)
-    return false
+    console.error(
+      "Erreur lors de la suppression de l'étudiant de la classe:",
+      error
+    );
+    return false;
   }
-}
+};
 
 export const deleteClass = async (classId: string): Promise<boolean> => {
   try {
-    await deleteDoc(doc(db, "classes", classId))
-    return true
+    await deleteDoc(doc(db, "classes", classId));
+    return true;
   } catch (error) {
-    console.error("Erreur lors de la suppression de la classe:", error)
-    return false
+    console.error("Erreur lors de la suppression de la classe:", error);
+    return false;
   }
-}
+};

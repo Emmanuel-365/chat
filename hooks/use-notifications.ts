@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { subscribeToNotifications, type Notification } from "@/lib/notifications"
+import { subscribeToNotifications } from "@/lib/notifications"
+import type { Notification } from "@/types/user";
 
 export const useNotifications = (userId: string | null) => {
   const [notifications, setNotifications] = useState<Notification[]>([])

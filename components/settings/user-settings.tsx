@@ -79,9 +79,9 @@ export function UserSettings() {
                 <RoleBadge role={user.role} />
               </div>
               <p className="text-sm text-muted-foreground">{user.email}</p>
-              {user.className && (
+              {user.role === "student" && user.studentProfile?.className && (
                 <Badge variant="outline" className="text-xs">
-                  {user.className}
+                  {user.studentProfile.className}
                 </Badge>
               )}
             </div>
@@ -91,7 +91,7 @@ export function UserSettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="displayName">Nom d'affichage</Label>
+              <Label htmlFor="displayName">Nom d&apos;affichage</Label>
               <Input
                 id="displayName"
                 value={settings.displayName}
@@ -156,7 +156,7 @@ export function UserSettings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Mentions</p>
-              <p className="text-sm text-muted-foreground">Quand quelqu'un vous mentionne</p>
+              <p className="text-sm text-muted-foreground">Quand quelqu&apos;un vous mentionne</p>
             </div>
             <Switch
               checked={settings.notifications.mentions}

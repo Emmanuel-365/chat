@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore"
 import { db } from "./firebase"
-import type { SchoolUser, Message } from "@/types/user"
+import type { SchoolUser, Message, UserRole } from "@/types/user"
 
 export interface AdminStats {
   totalUsers: number
@@ -59,7 +59,7 @@ export const getAdminStats = async (): Promise<AdminStats> => {
   }
 }
 
-export const updateUserRole = async (userId: string, newRole: "student" | "teacher" | "admin"): Promise<boolean> => {
+export const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
   try {
     await updateDoc(doc(db, "users", userId), {
       role: newRole,

@@ -97,7 +97,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Vous n'avez pas de compte ? Contactez votre administrateur pour recevoir une invitation.
+              Vous n&apos;avez pas de compte ? Contactez votre administrateur pour recevoir une invitation.
             </p>
           </div>
         </CardContent>
