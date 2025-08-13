@@ -52,33 +52,33 @@ export function UserSettings() {
     .toUpperCase()
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto overflow-y-auto">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Paramètres</h1>
-        <p className="text-muted-foreground">Gérez vos préférences et paramètres de compte</p>
+        <h1 className="text-xl sm:text-2xl font-bold">Paramètres</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Gérez vos préférences et paramètres de compte</p>
       </div>
 
       {/* Profile Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <User className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <User className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Profil</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={user.profilePicture} />
-              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            <Avatar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto sm:mx-0">
+              <AvatarImage src={user.profilePicture || "/placeholder.svg"} />
+              <AvatarFallback className="text-sm sm:text-lg">{initials}</AvatarFallback>
             </Avatar>
-            <div className="space-y-1">
-              <div className="flex items-center space-x-2">
-                <h3 className="font-medium">{user.displayName}</h3>
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                <h3 className="font-medium text-sm sm:text-base">{user.displayName}</h3>
                 <RoleBadge role={user.role} />
               </div>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{user.email}</p>
               {user.role === "student" && user.studentProfile?.className && (
                 <Badge variant="outline" className="text-xs">
                   {user.studentProfile.className}
@@ -89,23 +89,29 @@ export function UserSettings() {
 
           <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="displayName">Nom d&apos;affichage</Label>
+              <Label htmlFor="displayName" className="text-sm">
+                Nom d&apos;affichage
+              </Label>
               <Input
                 id="displayName"
                 value={settings.displayName}
                 onChange={(e) => setSettings((prev) => ({ ...prev, displayName: e.target.value }))}
+                className="text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={settings.email}
                 onChange={(e) => setSettings((prev) => ({ ...prev, email: e.target.value }))}
                 disabled
+                className="text-sm"
               />
             </div>
           </div>
@@ -115,16 +121,18 @@ export function UserSettings() {
       {/* Notifications */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Bell className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Notifications</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Messages directs</p>
-              <p className="text-sm text-muted-foreground">Recevoir des notifications pour les messages privés</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Messages directs</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Recevoir des notifications pour les messages privés
+              </p>
             </div>
             <Switch
               checked={settings.notifications.messages}
@@ -138,9 +146,9 @@ export function UserSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Annonces de classe</p>
-              <p className="text-sm text-muted-foreground">Notifications pour les annonces importantes</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Annonces de classe</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Notifications pour les annonces importantes</p>
             </div>
             <Switch
               checked={settings.notifications.classAnnouncements}
@@ -154,9 +162,9 @@ export function UserSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Mentions</p>
-              <p className="text-sm text-muted-foreground">Quand quelqu&apos;un vous mentionne</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Mentions</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Quand quelqu&apos;un vous mentionne</p>
             </div>
             <Switch
               checked={settings.notifications.mentions}
@@ -170,9 +178,9 @@ export function UserSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Notifications système</p>
-              <p className="text-sm text-muted-foreground">Mises à jour et maintenance</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Notifications système</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Mises à jour et maintenance</p>
             </div>
             <Switch
               checked={settings.notifications.system}
@@ -190,16 +198,16 @@ export function UserSettings() {
       {/* Appearance */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Sun className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Sun className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Apparence</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Mode sombre</p>
-              <p className="text-sm text-muted-foreground">Utiliser le thème sombre</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Mode sombre</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Utiliser le thème sombre</p>
             </div>
             <Switch
               checked={settings.appearance.darkMode}
@@ -213,9 +221,9 @@ export function UserSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Mode compact</p>
-              <p className="text-sm text-muted-foreground">Interface plus dense</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Mode compact</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Interface plus dense</p>
             </div>
             <Switch
               checked={settings.appearance.compactMode}
@@ -233,16 +241,16 @@ export function UserSettings() {
       {/* Privacy */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
+          <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+            <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Confidentialité</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Statut en ligne</p>
-              <p className="text-sm text-muted-foreground">Afficher quand vous êtes en ligne</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Statut en ligne</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Afficher quand vous êtes en ligne</p>
             </div>
             <Switch
               checked={settings.privacy.showOnlineStatus}
@@ -256,9 +264,9 @@ export function UserSettings() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Messages directs</p>
-              <p className="text-sm text-muted-foreground">Autoriser les messages privés</p>
+            <div className="space-y-1">
+              <p className="font-medium text-sm sm:text-base">Messages directs</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Autoriser les messages privés</p>
             </div>
             <Switch
               checked={settings.privacy.allowDirectMessages}
@@ -274,8 +282,8 @@ export function UserSettings() {
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
+      <div className="flex justify-center sm:justify-end">
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Sauvegarde..." : "Sauvegarder"}
         </Button>

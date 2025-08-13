@@ -49,19 +49,15 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
   }, [currentUser])
 
   const handleCreateClass = async () => {
-    if (!newClassName.trim() || !newClassGrade.trim()) return;
+    if (!newClassName.trim() || !newClassGrade.trim()) return
 
-    setCreating(true);
-    const { success, classId } = await createClass(
-      newClassName.trim(),
-      newClassGrade,
-      currentUser.uid
-    );
+    setCreating(true)
+    const { success, classId } = await createClass(newClassName.trim(), newClassGrade, currentUser.uid)
 
     if (success) {
-      setNewClassName("");
-      setNewClassGrade("");
-      setShowCreateDialog(false);
+      setNewClassName("")
+      setNewClassGrade("")
+      setShowCreateDialog(false)
 
       // Recharger les classes
       const newClass = {
@@ -70,25 +66,25 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
         grade: newClassGrade,
         teacherId: currentUser.uid,
         createdAt: new Date(),
-      };
-      setClasses((prevClasses) => [...prevClasses, newClass]);
+      }
+      setClasses((prevClasses) => [...prevClasses, newClass])
     }
 
-    setCreating(false);
-  };
+    setCreating(false)
+  }
 
   const ClassCard = ({ classData }: { classData: Class }) => {
-    const [students, setStudents] = useState<SchoolUser[]>([]);
-    const [teacher, setTeacher] = useState<SchoolUser | null>(null);
-    const [studentsLoaded, setStudentsLoaded] = useState(false);
+    const [students, setStudents] = useState<SchoolUser[]>([])
+    const [teacher, setTeacher] = useState<SchoolUser | null>(null)
+    const [studentsLoaded, setStudentsLoaded] = useState(false)
 
     useEffect(() => {
       const getTeacher = async () => {
-        const teacherData = await getTeacherByClass(classData.id);
-        setTeacher(teacherData);
-      };
-      getTeacher();
-    }, [classData.id]);
+        const teacherData = await getTeacherByClass(classData.id)
+        setTeacher(teacherData)
+      }
+      getTeacher()
+    }, [classData.id])
 
     const loadStudents = async () => {
       if (!studentsLoaded) {
@@ -100,38 +96,50 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
 
     return (
       <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2 sm:pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              <CardTitle className="text-lg">{classData.name}</CardTitle>
+            <div className="flex items-center space-x-2 min-w-0 flex-1">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
+              <CardTitle className="text-base sm:text-lg truncate">{classData.name}</CardTitle>
             </div>
-            <Badge variant="secondary">{classData.grade}</Badge>
+            <Badge variant="secondary" className="text-xs shrink-0">
+              {classData.grade}
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
+        <CardContent className="space-y-2 sm:space-y-3">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Professeur:</span>
-            <span className="font-medium">{teacher?.displayName}</span>
+            <span className="font-medium truncate ml-2">{teacher?.displayName}</span>
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button size="sm" onClick={() => onStartClassConversation(classData.id)} className="flex-1">
-              <MessageCircle className="h-4 w-4 mr-2" />
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <Button
+              size="sm"
+              onClick={() => onStartClassConversation(classData.id)}
+              className="flex-1 text-xs sm:text-sm"
+            >
+              <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Discussion
             </Button>
-            <Button size="sm" variant="outline" onClick={loadStudents} className="flex-1 bg-transparent">
-              <Users className="h-4 w-4 mr-2" />
-              Voir étudiants
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadStudents}
+              className="flex-1 bg-transparent text-xs sm:text-sm"
+            >
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Voir étudiants</span>
+              <span className="sm:hidden">Étudiants</span>
             </Button>
           </div>
 
           {studentsLoaded && students.length > 0 && (
             <div className="mt-3 pt-3 border-t">
-              <p className="text-sm font-medium mb-2">Étudiants de la classe:</p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
+              <p className="text-xs sm:text-sm font-medium mb-2">Étudiants de la classe:</p>
+              <div className="space-y-1 max-h-24 sm:max-h-32 overflow-y-auto">
                 {students.map((student) => (
-                  <div key={student.uid} className="text-xs text-muted-foreground">
+                  <div key={student.uid} className="text-xs text-muted-foreground truncate">
                     {student.displayName}
                   </div>
                 ))}
@@ -145,17 +153,17 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
 
   if (loading) {
     return (
-      <div className="p-4">
-        <div className="animate-pulse space-y-4">
+      <div className="p-3 sm:p-4">
+        <div className="animate-pulse space-y-3 sm:space-y-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i}>
               <CardHeader>
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-5 sm:h-6 bg-gray-200 rounded w-1/2"></div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 sm:h-4 bg-gray-200 rounded w-1/2"></div>
                 </div>
               </CardContent>
             </Card>
@@ -166,36 +174,43 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Classes</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold">Classes</h2>
+        </div>
         {(currentUser.role === "admin" || currentUser.role === "teacher") && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Créer une classe
+              <Button size="sm" className="w-full sm:w-auto">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="text-xs sm:text-sm">Créer une classe</span>
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[95vw] max-w-md">
               <DialogHeader>
-                <DialogTitle>Créer une nouvelle classe</DialogTitle>
+                <DialogTitle className="text-base sm:text-lg">Créer une nouvelle classe</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="className">Nom de la classe</Label>
+                  <Label htmlFor="className" className="text-sm">
+                    Nom de la classe
+                  </Label>
                   <Input
                     id="className"
                     placeholder="ex: 6ème A, Terminale S..."
                     value={newClassName}
                     onChange={(e) => setNewClassName(e.target.value)}
+                    className="text-sm"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="classGrade">Niveau</Label>
+                  <Label htmlFor="classGrade" className="text-sm">
+                    Niveau
+                  </Label>
                   <Select value={newClassGrade} onValueChange={setNewClassGrade}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm">
                       <SelectValue placeholder="Sélectionnez le niveau" />
                     </SelectTrigger>
                     <SelectContent>
@@ -209,15 +224,21 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex gap-2 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 pt-4">
                   <Button
                     onClick={handleCreateClass}
                     disabled={creating || !newClassName.trim() || !newClassGrade}
-                    className="flex-1"
+                    className="flex-1 text-sm"
+                    size="sm"
                   >
                     {creating ? "Création..." : "Créer"}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="flex-1">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                    className="flex-1 text-sm"
+                    size="sm"
+                  >
                     Annuler
                   </Button>
                 </div>
@@ -228,16 +249,18 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
       </div>
 
       {/* Classes List */}
-      <ScrollArea className="h-[500px]">
-        <div className="grid gap-4">
+      <ScrollArea className="h-[400px] sm:h-[500px]">
+        <div className="grid gap-3 sm:gap-4">
           {classes.length === 0 ? (
             <div className="text-center py-8">
-              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
+              <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm sm:text-base">
                 {currentUser.role === "student" ? "Aucune classe disponible" : "Aucune classe créée"}
               </p>
               {(currentUser.role === "admin" || currentUser.role === "teacher") && (
-                <p className="text-sm text-muted-foreground mt-2">Créez votre première classe pour commencer</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                  Créez votre première classe pour commencer
+                </p>
               )}
             </div>
           ) : (

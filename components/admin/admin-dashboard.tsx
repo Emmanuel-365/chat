@@ -42,7 +42,9 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
-            <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
+            <SheetTitle asChild>
+              <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
+            </SheetTitle>
           </div>
           <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />

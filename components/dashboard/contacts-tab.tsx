@@ -73,21 +73,21 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
 
     return (
       <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-4">
+        <CardContent className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Avatar>
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="relative shrink-0">
+                <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                   <AvatarImage src={user.profilePicture || "/placeholder.svg"} />
-                  <AvatarFallback>{initials}</AvatarFallback>
+                  <AvatarFallback className="text-xs sm:text-sm">{initials}</AvatarFallback>
                 </Avatar>
                 {isOnline && (
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 border-2 border-white rounded-full"></div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{user.displayName}</p>
-                <div className="flex items-center space-x-2 mt-1">
+                <p className="font-medium truncate text-sm sm:text-base">{user.displayName}</p>
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
                   <RoleBadge role={user.role} />
                   {user.role === "student" && user.studentProfile?.className && (
                     <Badge variant="outline" className="text-xs">
@@ -95,11 +95,12 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
               </div>
             </div>
-            <Button size="sm" onClick={() => onStartConversation(user.uid)} className="shrink-0">
-              <MessageCircle className="h-4 w-4" />
+            <Button size="sm" onClick={() => onStartConversation(user.uid)} className="shrink-0 ml-2">
+              <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline ml-1">Message</span>
             </Button>
           </div>
         </CardContent>
@@ -108,11 +109,11 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
   }
 
   const ContactList = ({ contacts, emptyMessage }: { contacts: SchoolUser[]; emptyMessage: string }) => (
-    <ScrollArea className="h-[400px]">
-      <div className="space-y-3 p-1">
+    <ScrollArea className="h-[300px] sm:h-[400px]">
+      <div className="space-y-2 sm:space-y-3 p-1">
         {contacts.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">{emptyMessage}</p>
+            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
           </div>
         ) : (
           contacts.map((contact) => <ContactCard key={contact.uid} user={contact} />)
@@ -123,16 +124,16 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
 
   if (loading) {
     return (
-      <div className="p-4">
-        <div className="animate-pulse space-y-4">
+      <div className="p-3 sm:p-4">
+        <div className="animate-pulse space-y-3 sm:space-y-4">
           {[...Array(5)].map((_, i) => (
             <Card key={i}>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-3 sm:h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-2 sm:h-3 bg-gray-200 rounded w-1/2"></div>
                   </div>
                 </div>
               </CardContent>
@@ -144,7 +145,7 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -152,14 +153,14 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
           placeholder="Rechercher un contact..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
+          className="pl-10 text-sm sm:text-base"
         />
       </div>
 
       {/* Search Results */}
       {searchTerm && (
         <div>
-          <h3 className="font-medium mb-3">Résultats de recherche ({searchResults.length})</h3>
+          <h3 className="font-medium mb-3 text-sm sm:text-base">Résultats de recherche ({searchResults.length})</h3>
           <ContactList contacts={searchResults} emptyMessage="Aucun contact trouvé" />
         </div>
       )}
@@ -167,22 +168,42 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
       {/* Contacts by Role */}
       {!searchTerm && (
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Tous ({allContacts.length})
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger
+              value="all"
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+            >
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Tous</span>
+              <span className="sm:hidden">Tous</span>
+              <span className="text-xs">({allContacts.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
-              Étudiants ({students.length})
+            <TabsTrigger
+              value="students"
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+            >
+              <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Étudiants</span>
+              <span className="sm:hidden">Étud.</span>
+              <span className="text-xs">({students.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="teachers" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Professeurs ({teachers.length})
+            <TabsTrigger
+              value="teachers"
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+            >
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Professeurs</span>
+              <span className="sm:hidden">Prof.</span>
+              <span className="text-xs">({teachers.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="admins" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Admins ({admins.length})
+            <TabsTrigger
+              value="admins"
+              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+            >
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Admins</span>
+              <span className="sm:hidden">Adm.</span>
+              <span className="text-xs">({admins.length})</span>
             </TabsTrigger>
           </TabsList>
 
