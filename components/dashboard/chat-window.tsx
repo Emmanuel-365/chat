@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip } from "lucide-react"
+import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip, Mic, StopCircle, Trash2 } from "lucide-react"
 import { sendMessage, subscribeToMessages, markConversationAsRead } from "@/lib/messages"
 import type { Attachment, Message } from "@/types/user"
 import { getUserById } from "@/lib/contacts"
@@ -31,6 +31,11 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
   const [sendError, setSendError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States for audio recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   // Déterminer le type de conversation et les paramètres
   const isDirectMessage = !conversationId.startsWith("class-")
@@ -125,11 +130,16 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
       }
 
       // 3. Create attachment object
-      const resourceType = cloudinaryData.resource_type;
-      let attachmentType: Attachment['type'] = 'file';
-      if (resourceType === 'image') attachmentType = 'image';
-      if (resourceType === 'video') attachmentType = 'video';
-      if (resourceType === 'audio') attachmentType = 'audio';
+      let attachmentType: Attachment['type'];
+      if (file.name === 'recording.webm') {
+        attachmentType = 'audio';
+      } else {
+        const resourceType = cloudinaryData.resource_type;
+        if (resourceType === 'image') attachmentType = 'image';
+        else if (resourceType === 'video') attachmentType = 'video';
+        else if (resourceType === 'audio') attachmentType = 'audio';
+        else attachmentType = 'file';
+      }
 
       const attachment: Attachment = {
         url: cloudinaryData.secure_url,
@@ -154,6 +164,55 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
       // Reset file input
       if(fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleStartRecording = async () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const newMediaRecorder = new MediaRecorder(stream);
+        setMediaRecorder(newMediaRecorder);
+
+        const audioChunks: Blob[] = [];
+        newMediaRecorder.ondataavailable = (event) => {
+          audioChunks.push(event.data);
+        };
+
+        newMediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          setAudioBlob(audioBlob);
+        };
+
+        newMediaRecorder.start();
+        setIsRecording(true);
+        setAudioBlob(null);
+      } catch (err) {
+        setUploadError("Permission pour le microphone refusée.");
+      }
+    } else {
+      setUploadError("L\'enregistrement audio n\'est pas supporté sur ce navigateur.");
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleSendRecording = () => {
+    if (audioBlob) {
+      const audioFile = new File([audioBlob], "recording.webm", { type: audioBlob.type });
+      // Crée un événement "artificiel" pour réutiliser la logique d'upload
+      const event = { target: { files: [audioFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
+      handleFileChange(event);
+      setAudioBlob(null);
+    }
+  };
+
+  const handleDiscardRecording = () => {
+    setAudioBlob(null);
   };
 
   const formatMessageTime = (date: Date) => {
@@ -248,27 +307,45 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
             <AlertDescription>{sendError}</AlertDescription>
           </Alert>
         )}
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <Button type="button" variant="ghost" size="sm" onClick={handleFileSelect} disabled={isUploading}>
-            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-          </Button>
-          <Input
-            placeholder="Tapez votre message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            disabled={loading || isUploading}
-            className="flex-1 text-sm sm:text-base"
-          />
-          <Button type="submit" disabled={loading || isUploading || (!newMessage.trim() && !isUploading)} size="sm" className="shrink-0">
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
+
+        {audioBlob ? (
+          <div className="flex items-center space-x-2">
+            <audio src={URL.createObjectURL(audioBlob)} controls className="flex-1" />
+            <Button size="sm" variant="ghost" onClick={handleDiscardRecording}><Trash2 className="h-4 w-4" /></Button>
+            <Button size="sm" onClick={handleSendRecording}><Send className="h-4 w-4" /></Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSendMessage} className="flex space-x-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <Button type="button" variant="ghost" size="sm" onClick={handleFileSelect} disabled={isUploading || isRecording}>
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+            </Button>
+            <Input
+              placeholder={isRecording ? "Enregistrement en cours..." : "Tapez votre message..."}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              disabled={loading || isUploading || isRecording}
+              className="flex-1 text-sm sm:text-base"
+            />
+            {isRecording ? (
+              <Button type="button" variant="destructive" size="sm" onClick={handleStopRecording}>
+                <StopCircle className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button type="button" variant="ghost" size="sm" onClick={handleStartRecording} disabled={isUploading}>
+                <Mic className="h-4 w-4" />
+              </Button>
+            )}
+            <Button type="submit" disabled={loading || isUploading || isRecording || !newMessage.trim()} size="sm" className="shrink-0">
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        )}
       </div>
     </div>
   )

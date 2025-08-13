@@ -22,7 +22,7 @@ export function MessageAttachment({ attachment }: MessageAttachmentProps) {
       case 'video':
         return <video src={attachment.url} controls className="max-w-xs rounded-lg" />;
       case 'audio':
-        return <audio src={attachment.url} controls className="w-full max-w-xs" />;
+        return <audio src={attachment.url} controls />;
       case 'file':
       default:
         return (
@@ -44,5 +44,5 @@ export function MessageAttachment({ attachment }: MessageAttachmentProps) {
     }
   };
 
-  return <div className="mt-2">{renderContent()}</div>;
+  return <>{renderContent()}</>;
 }
