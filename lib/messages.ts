@@ -37,7 +37,7 @@ export const sendMessage = async (
       participants = [sender.uid, recipientId].sort();
     }
 
-    const messageData = {
+    const messageData: Omit<Message, "id" | "timestamp"> & { timestamp: any } = {
       senderId: sender.uid,
       senderDisplayName: sender.displayName || sender.email,
       senderRole: sender.role,
@@ -46,9 +46,14 @@ export const sendMessage = async (
       isRead: false,
       type: isClassMessage ? "class" : "direct",
       participants,
-      ...(recipientId && { recipientId }),
-      ...(classId && { classId }),
     };
+
+    if (recipientId) {
+      messageData.recipientId = recipientId;
+    }
+    if (classId) {
+      messageData.classId = classId;
+    }
 
     await addDoc(collection(db, "messages"), messageData);
 
@@ -64,12 +69,30 @@ export const sendMessage = async (
     const conversationSnap = await getDoc(conversationRef);
 
     if (conversationSnap.exists()) {
-      await updateDoc(conversationRef, {
+      const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
+      const participantNames = participantUsers.filter(p => p).map(p => p!.displayName || p!.email!);
+      
+      const updateData: { [key: string]: any } = {
         lastMessage: content,
         lastMessageTime: serverTimestamp(),
-        unreadCount: increment(1),
+        participants: participants,
+        participantNames: participantNames
+      };
+
+      // Increment count for all participants except the sender
+      participants.forEach(participantId => {
+        if (participantId !== sender.uid) {
+          updateData[`unreadCounts.${participantId}`] = increment(1);
+        }
       });
+
+      await updateDoc(conversationRef, updateData);
     } else {
+      const unreadCounts: { [key: string]: number } = {};
+      participants.forEach(participantId => {
+        unreadCounts[participantId] = participantId === sender.uid ? 0 : 1;
+      });
+
       let conversationData: Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: any };
       if (isClassMessage) {
         const classDoc = await getDoc(doc(db, "classes", classId));
@@ -82,7 +105,7 @@ export const sendMessage = async (
           participantNames,
           lastMessage: content,
           lastMessageTime: serverTimestamp(),
-          unreadCount: 1,
+          unreadCounts,
           type: "class",
           className,
           classId: classId,
@@ -97,7 +120,7 @@ export const sendMessage = async (
           ].sort(),
           lastMessage: content,
           lastMessageTime: serverTimestamp(),
-          unreadCount: 1,
+          unreadCounts,
           type: "direct",
         };
       }
@@ -189,10 +212,12 @@ export const subscribeToConversations = (
   });
 };
 
-export const markConversationAsRead = async (conversationId: string) => {
+export const markConversationAsRead = async (conversationId: string, userId: string) => {
   try {
-    await updateDoc(doc(db, "conversations", conversationId), {
-      unreadCount: 0,
+    const conversationRef = doc(db, "conversations", conversationId);
+    // Use dot notation to update only the specific user's unread count.
+    await updateDoc(conversationRef, {
+      [`unreadCounts.${userId}`]: 0,
     });
   } catch (error) {
     console.error(

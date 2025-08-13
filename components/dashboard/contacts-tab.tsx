@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, MessageCircle, Users, GraduationCap, Shield } from "lucide-react"
-import { getAllUsers, getUsersByRole, searchUsers } from "@/lib/contacts"
+import { getContactsForUser, searchUsers } from "@/lib/contacts"
 import { RoleBadge } from "@/components/auth/role-badge"
 import type { SchoolUser } from "@/types/user"
 
@@ -19,48 +19,35 @@ interface ContactsTabProps {
 }
 
 export function ContactsTab({ currentUser, onStartConversation }: ContactsTabProps) {
-  const [allContacts, setAllContacts] = useState<SchoolUser[]>([])
-  const [students, setStudents] = useState<SchoolUser[]>([])
-  const [teachers, setTeachers] = useState<SchoolUser[]>([])
-  const [admins, setAdmins] = useState<SchoolUser[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searchResults, setSearchResults] = useState<SchoolUser[]>([])
-  const [loading, setLoading] = useState(true)
+  const [contacts, setContacts] = useState<{ [key: string]: SchoolUser[] }>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<SchoolUser[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadContacts = async () => {
-      setLoading(true)
+      setLoading(true);
+      const userContacts = await getContactsForUser(currentUser);
+      setContacts(userContacts);
+      setLoading(false);
+    };
 
-      const [allUsers, studentUsers, teacherUsers, adminUsers] = await Promise.all([
-        getAllUsers(),
-        getUsersByRole("student", currentUser.uid),
-        getUsersByRole("teacher", currentUser.uid),
-        getUsersByRole("admin", currentUser.uid),
-      ])
-
-      setAllContacts(allUsers)
-      setStudents(studentUsers)
-      setTeachers(teacherUsers)
-      setAdmins(adminUsers)
-      setLoading(false)
-    }
-
-    loadContacts()
-  }, [currentUser.uid])
+    loadContacts();
+  }, [currentUser]);
 
   useEffect(() => {
     const performSearch = async () => {
       if (searchTerm.trim()) {
-        const results = await searchUsers(searchTerm)
-        setSearchResults(results.filter((user) => user.uid !== currentUser.uid))
+        const results = await searchUsers(searchTerm, currentUser);
+        setSearchResults(results.filter((user) => user.uid !== currentUser.uid));
       } else {
-        setSearchResults([])
+        setSearchResults([]);
       }
-    }
+    };
 
-    const debounceTimer = setTimeout(performSearch, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [searchTerm, currentUser.uid])
+    const debounceTimer = setTimeout(performSearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, currentUser]);
 
   const ContactCard = ({ user }: { user: SchoolUser }) => {
     const initials = user.displayName
@@ -167,65 +154,33 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
 
       {/* Contacts by Role */}
       {!searchTerm && (
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue={Object.keys(contacts)[0] || 'all'} className="w-full">
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto gap-1 p-1">
-            <TabsTrigger
-              value="all"
-              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
-            >
-              <Users className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="font-medium">Tous</span>
-                <span className="text-xs opacity-75">({allContacts.length})</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="students"
-              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
-            >
-              <GraduationCap className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="font-medium">Étudiants</span>
-                <span className="text-xs opacity-75">({students.length})</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="teachers"
-              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
-            >
-              <Users className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="font-medium">Professeurs</span>
-                <span className="text-xs opacity-75">({teachers.length})</span>
-              </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="admins"
-              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
-            >
-              <Shield className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col items-center gap-0.5">
-                <span className="font-medium">Admins</span>
-                <span className="text-xs opacity-75">({admins.length})</span>
-              </div>
-            </TabsTrigger>
+            {Object.entries(contacts).map(([role, users]) => (
+              <TabsTrigger
+                key={role}
+                value={role}
+                className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
+              >
+                {role === 'students' && <GraduationCap className="h-4 w-4 shrink-0" />}
+                {role === 'teachers' && <Users className="h-4 w-4 shrink-0" />}
+                {role === 'admins' && <Shield className="h-4 w-4 shrink-0" />}
+                {role === 'all' && <Users className="h-4 w-4 shrink-0" />}
+                {role === 'classmates' && <Users className="h-4 w-4 shrink-0" />}
+                {role === 'teacher' && <GraduationCap className="h-4 w-4 shrink-0" />}
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="font-medium capitalize">{role === 'classmates' ? 'Ma Classe' : role}</span>
+                  <span className="text-xs opacity-75">({users.length})</span>
+                </div>
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="all" className="mt-4">
-            <ContactList contacts={allContacts} emptyMessage="Aucun contact disponible" />
-          </TabsContent>
-
-          <TabsContent value="students" className="mt-4">
-            <ContactList contacts={students} emptyMessage="Aucun étudiant trouvé" />
-          </TabsContent>
-
-          <TabsContent value="teachers" className="mt-4">
-            <ContactList contacts={teachers} emptyMessage="Aucun professeur trouvé" />
-          </TabsContent>
-
-          <TabsContent value="admins" className="mt-4">
-            <ContactList contacts={admins} emptyMessage="Aucun administrateur trouvé" />
-          </TabsContent>
+          {Object.entries(contacts).map(([role, users]) => (
+            <TabsContent key={role} value={role} className="mt-4">
+              <ContactList contacts={users} emptyMessage={`Aucun contact trouvé dans "${role}"`} />
+            </TabsContent>
+          ))}
         </Tabs>
       )}
     </div>

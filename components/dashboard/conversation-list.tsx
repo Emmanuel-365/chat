@@ -135,10 +135,10 @@ export function ConversationList({
                     <p className="text-xs text-muted-foreground truncate">
                       {conversation.lastMessage || "Aucun message"}
                     </p>
-                    {conversation.unreadCount > 0 && (
+                    {(conversation.unreadCounts?.[userId] || 0) > 0 && (
                       <div className="flex justify-end mt-1">
                         <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                          {conversation.unreadCount}
+                          {conversation.unreadCounts?.[userId] || 0}
                         </span>
                       </div>
                     )}

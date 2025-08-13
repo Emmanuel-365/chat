@@ -58,7 +58,7 @@ export interface Conversation {
   participantNames: string[];
   lastMessage?: string;
   lastMessageTime?: Date;
-  unreadCount: number;
+  unreadCounts: { [key: string]: number };
   type: "direct" | "class";
   className?: string;
   classId?: string;

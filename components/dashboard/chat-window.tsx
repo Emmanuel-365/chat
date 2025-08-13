@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, MoreVertical, ArrowLeft } from "lucide-react"
-import { sendMessage, subscribeToMessages } from "@/lib/messages"
+import { sendMessage, subscribeToMessages, markConversationAsRead } from "@/lib/messages"
 import type { Message } from "@/types/user"
 import { getUserById } from "@/lib/contacts"
 import type { SchoolUser } from "@/types/user"
@@ -60,6 +60,12 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     }
     fetchRecipient()
   }, [recipientId])
+
+  useEffect(() => {
+    if (conversationId) {
+      markConversationAsRead(conversationId, currentUser.uid);
+    }
+  }, [conversationId])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()

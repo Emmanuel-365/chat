@@ -1,4 +1,4 @@
-import { collection, getDoc, getDocs, query, where, orderBy, doc } from "firebase/firestore";
+import { collection, getDoc, getDocs, query, where, orderBy, doc, QueryConstraint } from "firebase/firestore";
 import { db } from "./firebase";
 import type { Class, SchoolUser } from "@/types/user";
 
@@ -72,23 +72,64 @@ export const getUsersByClass = async (classId: string): Promise<SchoolUser[]> =>
   }
 };
 
-export const searchUsers = async (searchTerm: string): Promise<SchoolUser[]> => {
+export const searchUsers = async (searchTerm: string, currentUser: SchoolUser): Promise<SchoolUser[]> => {
   try {
-    const allUsers = await getAllUsers();
+    // Get the appropriate contacts based on the user's role first
+    const contacts = await getContactsForUser(currentUser);
+    const allContacts = Object.values(contacts).flat();
 
-    return allUsers.filter(
+    if (!searchTerm.trim()) {
+      return allContacts;
+    }
+
+    // Then filter those contacts locally
+    return allContacts.filter(
       (user) =>
-        user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.role === "student" &&
-          user.studentProfile?.className
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()))
+        user.uid !== currentUser.uid &&
+        (user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   } catch (error) {
     console.error("Erreur lors de la recherche d'utilisateurs:", error);
     return [];
   }
+};
+
+export const getContactsForUser = async (user: SchoolUser): Promise<{ [key: string]: SchoolUser[] }> => {
+  if (user.role === 'admin') {
+    const [all, students, teachers, admins] = await Promise.all([
+      getAllUsers(),
+      getUsersByRole('student'),
+      getUsersByRole('teacher'),
+      getUsersByRole('admin'),
+    ]);
+    return { all, students, teachers, admins };
+  }
+
+  if (user.role === 'teacher') {
+    // A teacher can see all other teachers and all students
+    const [students, teachers] = await Promise.all([
+      getUsersByRole('student'),
+      getUsersByRole('teacher'),
+    ]);
+    return { students, teachers };
+  }
+
+  if (user.role === 'student' && user.studentProfile?.classId) {
+    // A student can see their classmates and their teacher
+    const classId = user.studentProfile.classId;
+    const [classmates, teacher] = await Promise.all([
+      getUsersByClass(classId),
+      getTeacherByClass(classId),
+    ]);
+    const contacts: { [key: string]: SchoolUser[] } = { classmates };
+    if (teacher) {
+      contacts.teacher = [teacher];
+    }
+    return contacts;
+  }
+
+  return {};
 };
 
 export const getTeacherByClass = async (
@@ -110,7 +151,7 @@ export const getTeacherByClass = async (
       return null;
     }
 
-    return teacherSnap.data() as SchoolUser;
+    return { uid: teacherSnap.id, ...teacherSnap.data() } as SchoolUser;
   } catch (error) {
     console.error(
       "Erreur lors de la récupération du professeur de la classe:",
