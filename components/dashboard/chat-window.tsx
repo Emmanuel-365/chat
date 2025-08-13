@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, MoreVertical, ArrowLeft } from "lucide-react"
+import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip } from "lucide-react"
 import { sendMessage, subscribeToMessages, markConversationAsRead } from "@/lib/messages"
-import type { Message } from "@/types/user"
+import type { Attachment, Message } from "@/types/user"
 import { getUserById } from "@/lib/contacts"
 import type { SchoolUser } from "@/types/user"
 import { Alert, AlertDescription } from "../ui/alert"
+import { MessageAttachment } from "./message-attachment"
 
 interface ChatWindowProps {
   conversationId: string
@@ -21,12 +22,15 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowProps) {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [recipient, setRecipient] = useState<SchoolUser | null>(null)
-  const [sendError, setSendError] = useState<string | null>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [recipient, setRecipient] = useState<SchoolUser | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Déterminer le type de conversation et les paramètres
   const isDirectMessage = !conversationId.startsWith("class-")
@@ -82,6 +86,75 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     }
     setLoading(false)
   }
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      // 1. Get signature from our API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paramsToSign: { timestamp: Math.round(new Date().getTime() / 1000) } })
+      });
+      const { signature, timestamp } = await response.json();
+
+      // 2. Upload file to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY!); 
+      formData.append('signature', signature);
+      formData.append('timestamp', timestamp);
+
+      const cloudinaryResponse = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const cloudinaryData = await cloudinaryResponse.json();
+
+      if (cloudinaryData.error) {
+        throw new Error(cloudinaryData.error.message);
+      }
+
+      // 3. Create attachment object
+      const resourceType = cloudinaryData.resource_type;
+      let attachmentType: Attachment['type'] = 'file';
+      if (resourceType === 'image') attachmentType = 'image';
+      if (resourceType === 'video') attachmentType = 'video';
+      if (resourceType === 'audio') attachmentType = 'audio';
+
+      const attachment: Attachment = {
+        url: cloudinaryData.secure_url,
+        type: attachmentType,
+        fileName: file.name,
+        size: file.size,
+        ...(cloudinaryData.width && { width: cloudinaryData.width }),
+        ...(cloudinaryData.height && { height: cloudinaryData.height }),
+        ...(cloudinaryData.duration && { duration: cloudinaryData.duration }),
+      };
+
+      // 4. Send message with attachment
+      const result = await sendMessage(currentUser, "", attachment, recipientId, classId);
+      if (!result.success) {
+        throw new Error(result.error || "Impossible d'enregistrer le message dans la base de données.");
+      }
+
+    } catch (err: any) {
+      setUploadError(err.message || 'Erreur lors de l\'envoi du fichier.');
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if(fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const formatMessageTime = (date: Date) => {
     return date.toLocaleTimeString("fr-FR", {
@@ -150,7 +223,8 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
                     {!isOwnMessage && message.senderDisplayName && (
                       <p className="text-xs font-medium mb-1 opacity-70">{message.senderDisplayName}</p>
                     )}
-                    <p className="text-sm break-words">{message.content}</p>
+                    {message.content && <p className="text-sm break-words">{message.content}</p>}
+                    {message.attachment && <MessageAttachment attachment={message.attachment} />}
                     <p className={`text-xs mt-1 ${isOwnMessage ? "text-blue-100" : "text-muted-foreground"}`}>
                       {formatMessageTime(message.timestamp)}
                     </p>
@@ -164,20 +238,34 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
 
       {/* Message Input */}
       <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        {uploadError && (
+          <Alert variant="destructive" className="mb-2">
+            <AlertDescription>{uploadError}</AlertDescription>
+          </Alert>
+        )}
         {sendError && (
           <Alert variant="destructive" className="mb-2">
             <AlertDescription>{sendError}</AlertDescription>
           </Alert>
         )}
         <form onSubmit={handleSendMessage} className="flex space-x-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button type="button" variant="ghost" size="sm" onClick={handleFileSelect} disabled={isUploading}>
+            {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+          </Button>
           <Input
             placeholder="Tapez votre message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            disabled={loading}
+            disabled={loading || isUploading}
             className="flex-1 text-sm sm:text-base"
           />
-          <Button type="submit" disabled={loading || !newMessage.trim()} size="sm" className="shrink-0">
+          <Button type="submit" disabled={loading || isUploading || (!newMessage.trim() && !isUploading)} size="sm" className="shrink-0">
             <Send className="h-4 w-4" />
           </Button>
         </form>

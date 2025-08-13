@@ -26,6 +26,16 @@ export interface Class {
   createdAt: Date;
 }
 
+export interface Attachment {
+  url: string;
+  type: 'image' | 'video' | 'audio' | 'file';
+  fileName: string;
+  size: number;
+  width?: number;
+  height?: number;
+  duration?: number;
+}
+
 export interface Message {
   id: string;
   senderId: string;
@@ -33,7 +43,8 @@ export interface Message {
   senderRole: UserRole;
   recipientId?: string;
   classId?: string;
-  content: string;
+  content?: string; // Rendu optionnel
+  attachment?: Attachment; // Ajout de la pièce jointe
   timestamp: Date;
   isRead: boolean;
   type: "direct" | "class" | "announcement";

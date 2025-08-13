@@ -19,7 +19,8 @@ import { getUserById, getUsersByClass, getTeacherByClass } from "./contacts";
 
 export const sendMessage = async (
   sender: SchoolUser,
-  content: string,
+  content: string, // Le contenu textuel, peut être vide
+  attachment: Attachment | null, // La nouvelle pièce jointe
   recipientId?: string,
   classId?: string
 ) => {
@@ -46,6 +47,7 @@ export const sendMessage = async (
       isRead: false,
       type: isClassMessage ? "class" : "direct",
       participants,
+      ...(attachment && { attachment }),
     };
 
     if (recipientId) {
@@ -72,8 +74,18 @@ export const sendMessage = async (
       const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
       const participantNames = participantUsers.filter(p => p).map(p => p!.displayName || p!.email!);
       
+      let lastMessageText = content;
+      if (attachment) {
+        switch (attachment.type) {
+          case 'image': lastMessageText = '📷 Photo'; break;
+          case 'video': lastMessageText = '📹 Vidéo'; break;
+          case 'audio': lastMessageText = '🎵 Audio'; break;
+          default: lastMessageText = '📎 Fichier'; break;
+        }
+      }
+
       const updateData: { [key: string]: any } = {
-        lastMessage: content,
+        lastMessage: lastMessageText,
         lastMessageTime: serverTimestamp(),
         participants: participants,
         participantNames: participantNames
@@ -112,13 +124,24 @@ export const sendMessage = async (
         };
       } else {
         const recipient = recipientId ? await getUserById(recipientId) : null;
+
+        let lastMessageText = content;
+        if (attachment) {
+          switch (attachment.type) {
+            case 'image': lastMessageText = '📷 Photo'; break;
+            case 'video': lastMessageText = '📹 Vidéo'; break;
+            case 'audio': lastMessageText = '🎵 Audio'; break;
+            default: lastMessageText = '📎 Fichier'; break;
+          }
+        }
+
         conversationData = {
           participants: participants,
           participantNames: [
             sender.displayName || sender.email,
             recipient?.displayName || recipient?.email || "Utilisateur supprimé",
           ].sort(),
-          lastMessage: content,
+          lastMessage: lastMessageText,
           lastMessageTime: serverTimestamp(),
           unreadCounts,
           type: "direct",
