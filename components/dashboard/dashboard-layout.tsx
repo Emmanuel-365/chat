@@ -62,24 +62,34 @@ export function DashboardLayout() {
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">EcoleChat</h1>
-          <div className="flex items-center space-x-1 sm:space-x-2">
+          <div className="flex items-center space-x-1 overflow-hidden">
             {/* Ajout du centre de notifications */}
-            <NotificationCenter userId={user.uid} />
+            <div className="flex-shrink-0">
+              <NotificationCenter userId={user.uid} />
+            </div>
             {/* Ajout de la recherche de messages */}
-            <MessageSearch userId={user.uid} />
+            <div className="flex-shrink-0">
+              <MessageSearch userId={user.uid} />
+            </div>
             {/* Ajout du bouton admin pour les administrateurs */}
             {user.role === "admin" && (
-              <Button variant="ghost" size="sm" onClick={() => router.push("/admin")}>
-                <Shield className="h-4 w-4" />
-              </Button>
+              <div className="flex-shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => router.push("/admin")}>
+                  <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+              </div>
             )}
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <div className="flex-shrink-0">
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Button>
+            </div>
             {/* Bouton fermer pour mobile */}
-            <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setSidebarOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex-shrink-0 md:hidden">
+              <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
+                <X className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Button>
+            </div>
           </div>
         </div>
         <UserProfile user={user} />
@@ -90,42 +100,42 @@ export function DashboardLayout() {
         <Button
           variant={activeTab === "messages" ? "default" : "ghost"}
           size="sm"
-          className="rounded-none text-xs sm:text-sm px-2 sm:px-3"
+          className="rounded-none text-xs sm:text-sm px-1 sm:px-2 md:px-3 flex-1 min-w-0"
           onClick={() => handleTabChange("messages")}
         >
-          <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Messages</span>
-          <span className="sm:hidden">Msg</span>
+          <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline truncate">Messages</span>
+          <span className="sm:hidden truncate">Msg</span>
         </Button>
         <Button
           variant={activeTab === "contacts" ? "default" : "ghost"}
           size="sm"
-          className="rounded-none text-xs sm:text-sm px-2 sm:px-3"
+          className="rounded-none text-xs sm:text-sm px-1 sm:px-2 md:px-3 flex-1 min-w-0"
           onClick={() => handleTabChange("contacts")}
         >
-          <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Contacts</span>
-          <span className="sm:hidden">Cont</span>
+          <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline truncate">Contacts</span>
+          <span className="sm:hidden truncate">Cont</span>
         </Button>
         <Button
           variant={activeTab === "classes" ? "default" : "ghost"}
           size="sm"
-          className="rounded-none text-xs sm:text-sm px-2 sm:px-3"
+          className="rounded-none text-xs sm:text-sm px-1 sm:px-2 md:px-3 flex-1 min-w-0"
           onClick={() => handleTabChange("classes")}
         >
-          <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Classes</span>
-          <span className="sm:hidden">Cls</span>
+          <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline truncate">Classes</span>
+          <span className="sm:hidden truncate">Cls</span>
         </Button>
         <Button
           variant={activeTab === "settings" ? "default" : "ghost"}
           size="sm"
-          className="rounded-none text-xs sm:text-sm px-2 sm:px-3"
+          className="rounded-none text-xs sm:text-sm px-1 sm:px-2 md:px-3 flex-1 min-w-0"
           onClick={() => handleTabChange("settings")}
         >
-          <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Paramètres</span>
-          <span className="sm:hidden">Param</span>
+          <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+          <span className="hidden sm:inline truncate">Paramètres</span>
+          <span className="sm:hidden truncate">Param</span>
         </Button>
       </div>
 

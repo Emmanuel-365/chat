@@ -129,7 +129,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Search className="h-4 w-4 mr-2" />
-          Rechercher
+          
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh]">

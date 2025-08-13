@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Users, MessageCircle, BookOpen } from "lucide-react"
-import { getClasses, getClassesByTeacher, createClass } from "@/lib/classes"
+import { getClasses, getClassesByTeacher, createClass, getClassById } from "@/lib/classes"
 import { getUsersByClass, getTeacherByClass } from "@/lib/contacts"
 import type { Class, SchoolUser } from "@/types/user"
 
@@ -31,14 +31,16 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
     const loadClasses = async () => {
       setLoading(true)
 
-      let classesData: Class[]
+      let classesData: Class[] = []
       if (currentUser.role === "admin") {
         classesData = await getClasses()
       } else if (currentUser.role === "teacher") {
         classesData = await getClassesByTeacher(currentUser.uid)
-      } else {
-        // Pour les étudiants, on récupère toutes les classes mais on pourrait filtrer
-        classesData = await getClasses()
+      } else if (currentUser.role === "student" && currentUser.studentProfile?.classId) {
+        const studentClass = await getClassById(currentUser.studentProfile.classId)
+        if (studentClass) {
+          classesData = [studentClass]
+        }
       }
 
       setClasses(classesData)
@@ -256,7 +258,7 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
             <div className="text-center py-8">
               <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground text-sm sm:text-base">
-                {currentUser.role === "student" ? "Aucune classe disponible" : "Aucune classe créée"}
+                {currentUser.role === "student" ? "Vous n'êtes inscrit dans aucune classe pour le moment." : "Aucune classe créée"}
               </p>
               {(currentUser.role === "admin" || currentUser.role === "teacher") && (
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2">
@@ -272,3 +274,4 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
     </div>
   )
 }
+

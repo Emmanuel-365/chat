@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +12,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { UserPlus, Mail, CheckCircle, AlertCircle } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth";
 import { createInvitation } from "@/lib/invitations";
+import { getClasses } from "@/lib/classes";
 import { RoleBadge } from "@/components/auth/role-badge";
-import type { UserRole, StudentProfile } from "@/types/user";
+import type { UserRole, StudentProfile, Class } from "@/types/user";
 
 export function UserCreation() {
   const { user } = useAuth();
@@ -21,19 +22,33 @@ export function UserCreation() {
     email: "",
     displayName: "",
     role: "" as UserRole,
-    className: "",
+    classId: "",
     department: "",
     position: "",
     subject: "",
   });
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      const classesData = await getClasses();
+      setClasses(classesData);
+    };
+    loadClasses();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.email || !formData.displayName || !formData.role) {
       setMessage({ type: "error", text: "Veuillez remplir tous les champs obligatoires" });
+      return;
+    }
+
+    if (formData.role === "student" && !formData.classId) {
+      setMessage({ type: "error", text: "Veuillez sélectionner une classe pour l'étudiant" });
       return;
     }
 
@@ -45,8 +60,17 @@ export function UserCreation() {
     setLoading(true);
     setMessage(null);
 
-    const studentProfile: StudentProfile = {};
-    if (formData.className) studentProfile.className = formData.className;
+    let studentProfile: StudentProfile | undefined;
+    if (formData.role === "student" && formData.classId) {
+      const selectedClass = classes.find(c => c.id === formData.classId);
+      if (selectedClass) {
+        studentProfile = {
+          classId: selectedClass.id,
+          className: selectedClass.name,
+          grade: selectedClass.grade,
+        };
+      }
+    }
 
     const result = await createInvitation(
       formData.email,
@@ -66,7 +90,7 @@ export function UserCreation() {
         email: "",
         displayName: "",
         role: "" as UserRole,
-        className: "",
+        classId: "",
         department: "",
         position: "",
         subject: "",
@@ -142,13 +166,19 @@ export function UserCreation() {
           {/* Champs conditionnels selon le rôle */}
           {formData.role === "student" && (
             <div className="space-y-2">
-              <Label htmlFor="className">Classe</Label>
-              <Input
-                id="className"
-                value={formData.className}
-                onChange={(e) => handleInputChange("className", e.target.value)}
-                placeholder="6ème A, Terminale S, L1 Informatique..."
-              />
+              <Label htmlFor="classId">Classe</Label>
+              <Select value={formData.classId} onValueChange={(value) => handleInputChange("classId", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une classe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.grade})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

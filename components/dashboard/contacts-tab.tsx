@@ -32,7 +32,7 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
       setLoading(true)
 
       const [allUsers, studentUsers, teacherUsers, adminUsers] = await Promise.all([
-        getAllUsers(currentUser.uid),
+        getAllUsers(),
         getUsersByRole("student", currentUser.uid),
         getUsersByRole("teacher", currentUser.uid),
         getUsersByRole("admin", currentUser.uid),
@@ -168,42 +168,46 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
       {/* Contacts by Role */}
       {!searchTerm && (
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto gap-1 p-1">
             <TabsTrigger
               value="all"
-              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
             >
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Tous</span>
-              <span className="sm:hidden">Tous</span>
-              <span className="text-xs">({allContacts.length})</span>
+              <Users className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="font-medium">Tous</span>
+                <span className="text-xs opacity-75">({allContacts.length})</span>
+              </div>
             </TabsTrigger>
             <TabsTrigger
               value="students"
-              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
             >
-              <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Étudiants</span>
-              <span className="sm:hidden">Étud.</span>
-              <span className="text-xs">({students.length})</span>
+              <GraduationCap className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="font-medium">Étudiants</span>
+                <span className="text-xs opacity-75">({students.length})</span>
+              </div>
             </TabsTrigger>
             <TabsTrigger
               value="teachers"
-              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
             >
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Professeurs</span>
-              <span className="sm:hidden">Prof.</span>
-              <span className="text-xs">({teachers.length})</span>
+              <Users className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="font-medium">Professeurs</span>
+                <span className="text-xs opacity-75">({teachers.length})</span>
+              </div>
             </TabsTrigger>
             <TabsTrigger
               value="admins"
-              className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm p-2"
+              className="flex flex-col items-center justify-center gap-1 text-xs sm:text-sm p-2 sm:p-3 h-auto min-h-[60px] sm:min-h-[50px]"
             >
-              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Admins</span>
-              <span className="sm:hidden">Adm.</span>
-              <span className="text-xs">({admins.length})</span>
+              <Shield className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="font-medium">Admins</span>
+                <span className="text-xs opacity-75">({admins.length})</span>
+              </div>
             </TabsTrigger>
           </TabsList>
 

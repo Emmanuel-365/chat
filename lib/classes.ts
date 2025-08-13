@@ -54,6 +54,26 @@ export const getClasses = async (): Promise<Class[]> => {
   }
 };
 
+export const getClassById = async (classId: string): Promise<Class | null> => {
+  try {
+    const classRef = doc(db, "classes", classId);
+    const classSnap = await getDoc(classRef);
+
+    if (!classSnap.exists()) {
+      return null;
+    }
+
+    return {
+      id: classSnap.id,
+      ...classSnap.data(),
+      createdAt: classSnap.data().createdAt?.toDate() || new Date(),
+    } as Class;
+  } catch (error) {
+    console.error("Erreur lors de la récupération de la classe:", error);
+    return null;
+  }
+};
+
 export const getClassesByTeacher = async (teacherId: string): Promise<Class[]> => {
   try {
     const q = query(

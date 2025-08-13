@@ -8,7 +8,7 @@ import { ClassManagement } from "./class-management"
 import { MessageModeration } from "./message-moderation"
 import { SystemSettings } from "./system-settings"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, Menu, X } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
@@ -42,9 +42,7 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
-            <SheetTitle asChild>
-              <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
-            </SheetTitle>
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
           </div>
           <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-4 w-4" />
@@ -141,6 +139,7 @@ export function AdminDashboard() {
       {/* Mobile Sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="w-full sm:w-80 p-0">
+          <SheetTitle className="sr-only">Menu d'administration</SheetTitle>
           <SidebarContent />
         </SheetContent>
       </Sheet>

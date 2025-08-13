@@ -22,9 +22,10 @@ service cloud.firestore {
       allow read, create, update, delete: if isAdmin(request.auth.uid);
     }
 
-    // Classes - only admins can create, read, update, delete
+    // Classes - admins can manage, authenticated users can read
     match /classes/{classId} {
-      allow read, create, update, delete: if isAdmin(request.auth.uid);
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin(request.auth.uid);
     }
 
     // Settings - only admins can read and write
@@ -36,25 +37,46 @@ service cloud.firestore {
     function isAdmin(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role == 'admin';
     }
+    
+    function isTeacherOfClass(userId, classId) {
+      return get(/databases/$(database)/documents/classes/$(classId)).data.teacherId == userId;
+    }
 
-    function isParticipant(userId, participants) {
-      return userId in participants;
+    function isStudentInClass(userId, classId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.studentProfile.classId == classId;
     }
 
     function canAccessMessage(userId, messageData) {
+      // Admins can access all messages
+      if (isAdmin(userId)) {
+        return true;
+      }
       // Allow if user is a participant in direct message
       if (messageData.type == 'direct') {
         return userId in messageData.participants;
       }
       // Allow if user is part of the class in class message
       if (messageData.type == 'class') {
-        return exists(/databases/$(database)/documents/users/$(userId)) && get(/databases/$(database)/documents/users/$(userId)).data.studentProfile.classId == messageData.classId;
+        return isStudentInClass(userId, messageData.classId) || isTeacherOfClass(userId, messageData.classId);
       }
       return false;
     }
 
     function canAccessConversation(userId, conversationData) {
-      return userId in conversationData.participants;
+      // Admins can access all conversations
+      if (isAdmin(userId)) {
+        return true;
+      }
+      // Direct messages are handled by the participants array
+      if (conversationData.type == 'direct') {
+        return userId in conversationData.participants;
+      }
+      // Class conversations require checking student or teacher status
+      if (conversationData.type == 'class') {
+        return isStudentInClass(userId, conversationData.classId) || isTeacherOfClass(userId, conversationData.classId);
+      }
+      return false;
     }
   }
 }

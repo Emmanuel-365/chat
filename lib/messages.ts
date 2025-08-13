@@ -8,15 +8,14 @@ import {
   updateDoc,
   doc,
   getDoc,
-  getDocs,
   serverTimestamp,
   type Unsubscribe,
   setDoc,
   increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Message, SchoolUser, Conversation } from "@/types/user";
-import { getUserById } from "./contacts";
+import type { Message, SchoolUser, Conversation, Class } from "@/types/user";
+import { getUserById, getUsersByClass, getTeacherByClass } from "./contacts";
 
 export const sendMessage = async (
   sender: SchoolUser,
@@ -25,6 +24,19 @@ export const sendMessage = async (
   classId?: string
 ) => {
   try {
+    const isClassMessage = !!classId;
+    let participants: string[] = [];
+    if (isClassMessage) {
+      const students = await getUsersByClass(classId);
+      const teacher = await getTeacherByClass(classId);
+      participants = students.map(s => s.uid);
+      if (teacher && !participants.includes(teacher.uid)) {
+        participants.push(teacher.uid);
+      }
+    } else if (recipientId) {
+      participants = [sender.uid, recipientId].sort();
+    }
+
     const messageData = {
       senderId: sender.uid,
       senderDisplayName: sender.displayName || sender.email,
@@ -32,10 +44,10 @@ export const sendMessage = async (
       content,
       timestamp: serverTimestamp(),
       isRead: false,
-      type: recipientId ? "direct" : "class",
+      type: isClassMessage ? "class" : "direct",
+      participants,
       ...(recipientId && { recipientId }),
       ...(classId && { classId }),
-      ...(recipientId && { participants: [sender.uid, recipientId] }),
     };
 
     await addDoc(collection(db, "messages"), messageData);
@@ -43,7 +55,7 @@ export const sendMessage = async (
     // Update conversation
     let conversationId: string;
     if (recipientId) {
-      conversationId = [sender.uid, recipientId].sort().join("-");
+      conversationId = participants.join("-");
     } else {
       conversationId = `class-${classId}`;
     }
@@ -58,18 +70,37 @@ export const sendMessage = async (
         unreadCount: increment(1),
       });
     } else {
-      const recipient = recipientId ? await getUserById(recipientId) : null;
-      const conversationData = {
-        participants: recipientId ? [sender.uid, recipientId] : [sender.uid],
-        participantNames: recipientId
-          ? [sender.displayName || sender.email, (recipient?.displayName || recipient?.email) ?? "Utilisateur supprimé"]
-          : [sender.displayName || sender.email],
-        lastMessage: content,
-        lastMessageTime: serverTimestamp(),
-        unreadCount: 1,
-        type: recipientId ? "direct" : "class",
-        ...(classId && { className: classId }),
-      };
+      let conversationData: Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: any };
+      if (isClassMessage) {
+        const classDoc = await getDoc(doc(db, "classes", classId));
+        const className = (classDoc.data() as Class)?.name || classId;
+        const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
+        const participantNames = participantUsers.filter(p => p).map(p => p!.displayName || p!.email!);
+
+        conversationData = {
+          participants,
+          participantNames,
+          lastMessage: content,
+          lastMessageTime: serverTimestamp(),
+          unreadCount: 1,
+          type: "class",
+          className,
+          classId: classId,
+        };
+      } else {
+        const recipient = recipientId ? await getUserById(recipientId) : null;
+        conversationData = {
+          participants: participants,
+          participantNames: [
+            sender.displayName || sender.email,
+            recipient?.displayName || recipient?.email || "Utilisateur supprimé",
+          ].sort(),
+          lastMessage: content,
+          lastMessageTime: serverTimestamp(),
+          unreadCount: 1,
+          type: "direct",
+        };
+      }
       await setDoc(conversationRef, conversationData);
     }
 
@@ -92,10 +123,11 @@ export const subscribeToMessages = (
   let q;
 
   if (recipientId) {
+    const conversationId = [userId, recipientId].sort().join('-');
     q = query(
       collection(db, "messages"),
       where("type", "==", "direct"),
-      where("participants", "in", [[userId, recipientId], [recipientId, userId]]),
+      where("participants", "==", [userId, recipientId].sort()),
       orderBy("timestamp", "asc")
     );
   } else if (classId) {
@@ -110,7 +142,7 @@ export const subscribeToMessages = (
     return;
   }
 
-  return onSnapshot(q, (snapshot) => {
+  const unsubscribe = onSnapshot(q, (snapshot) => {
     try {
       const messages: Message[] = [];
       snapshot.forEach((doc) => {
@@ -126,9 +158,10 @@ export const subscribeToMessages = (
       }
     } catch (error) {
       console.error("Error processing messages snapshot:", error);
-      // Optionally, you might want to notify the UI about the error
     }
   });
+
+  return unsubscribe;
 };
 
 export const subscribeToConversations = (

@@ -37,6 +37,7 @@ export interface Message {
   timestamp: Date;
   isRead: boolean;
   type: "direct" | "class" | "announcement";
+  participants: string[];
 }
 
 export interface Invitation {
@@ -60,6 +61,7 @@ export interface Conversation {
   unreadCount: number;
   type: "direct" | "class";
   className?: string;
+  classId?: string;
 }
 
 export interface Notification {
