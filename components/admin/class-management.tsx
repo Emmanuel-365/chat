@@ -16,7 +16,6 @@ import type { Class, SchoolUser } from "@/types/user"
 
 export function ClassManagement() {
   const [classes, setClasses] = useState<Class[]>([])
-  const [teachers, setTeachers] = useState<SchoolUser[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showStudentsDialog, setShowStudentsDialog] = useState(false)
@@ -27,19 +26,13 @@ export function ClassManagement() {
   // Form states
   const [newClassName, setNewClassName] = useState("")
   const [newClassGrade, setNewClassGrade] = useState("")
-  const [selectedTeacherId, setSelectedTeacherId] = useState("")
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
-      const [classesData, teachersData] = await Promise.all([
-        getClasses(),
-        getUsersByRole("teacher"),
-      ]);
-
+      const classesData = await getClasses();
       setClasses(classesData);
-      setTeachers(teachersData);
       setLoading(false);
     }
 
@@ -47,19 +40,17 @@ export function ClassManagement() {
   }, [])
 
   const handleCreateClass = async () => {
-    if (!newClassName.trim() || !newClassGrade.trim() || !selectedTeacherId) return
+    if (!newClassName.trim() || !newClassGrade.trim()) return
 
     setCreating(true)
     const { success } = await createClass(
       newClassName.trim(),
-      newClassGrade,
-      selectedTeacherId
+      newClassGrade
     )
 
     if (success) {
       setNewClassName("")
       setNewClassGrade("")
-      setSelectedTeacherId("")
       setShowCreateDialog(false)
 
       // Recharger les classes
@@ -96,13 +87,7 @@ export function ClassManagement() {
     const success = await addStudentToClass(selectedClass.id, studentId)
     if (success) {
       // Recharger les données
-      const [updatedClassStudents, updatedAvailableStudents] = await Promise.all([
-        getUsersByClass(selectedClass.id),
-        getUsersByRole("student"),
-      ])
-
-      setClassStudents(updatedClassStudents)
-      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.studentProfile?.classId || s.studentProfile?.classId !== selectedClass.id))
+      handleViewStudents(selectedClass);
     }
   }
 
@@ -112,18 +97,11 @@ export function ClassManagement() {
     const success = await removeStudentFromClass(studentId)
     if (success) {
       // Recharger les données
-      const [updatedClassStudents, updatedAvailableStudents] = await Promise.all([
-        getUsersByClass(selectedClass.id),
-        getUsersByRole("student"),
-      ])
-
-      setClassStudents(updatedClassStudents)
-      setAvailableStudents(updatedAvailableStudents.filter((s) => !s.studentProfile?.classId || s.studentProfile?.classId !== selectedClass.id))
+      handleViewStudents(selectedClass);
     }
   }
 
   const ClassCard = ({ classData }: { classData: Class }) => {
-    const teacher = teachers.find(t => t.uid === classData.teacherId)
     return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -136,11 +114,6 @@ export function ClassManagement() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Professeur:</span>
-          <span className="font-medium">{teacher?.displayName}</span>
-        </div>
-
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Créée le:</span>
           <span>{classData.createdAt.toLocaleDateString()}</span>
@@ -187,7 +160,7 @@ export function ClassManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gestion des Classes</h1>
-          <p className="text-muted-foreground">Créez et gérez les classes de votre établissement</p>
+          <p className="text-muted-foreground">Créez et gérez les groupes d'étudiants</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
@@ -205,7 +178,7 @@ export function ClassManagement() {
                 <Label htmlFor="className">Nom de la classe</Label>
                 <Input
                   id="className"
-                  placeholder="ex: 6ème A, Terminale S..."
+                  placeholder="ex: L1 Informatique, M2 Droit..."
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                 />
@@ -228,25 +201,10 @@ export function ClassManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="teacher">Professeur principal</Label>
-                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez un professeur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.uid} value={teacher.uid}>
-                        {teacher.displayName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="flex gap-2 pt-4">
                 <Button
                   onClick={handleCreateClass}
-                  disabled={creating || !newClassName.trim() || !newClassGrade || !selectedTeacherId}
+                  disabled={creating || !newClassName.trim() || !newClassGrade}
                   className="flex-1"
                 >
                   {creating ? "Création..." : "Créer"}

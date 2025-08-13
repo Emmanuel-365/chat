@@ -22,7 +22,14 @@ export interface Class {
   id: string;
   name: string;
   grade: string;
+  createdAt: Date;
+}
+
+export interface Course {
+  id: string;
+  name: string;
   teacherId: string;
+  classIds: string[];
   createdAt: Date;
 }
 

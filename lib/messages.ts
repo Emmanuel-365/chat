@@ -14,8 +14,9 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Message, SchoolUser, Conversation, Class } from "@/types/user";
-import { getUserById, getUsersByClass, getTeacherByClass } from "./contacts";
+import type { Message, SchoolUser, Conversation, Class, Attachment } from "@/types/user";
+import { getUserById, getUsersByClass } from "./contacts";
+import { getCoursesByClass } from "./courses";
 
 export const sendMessage = async (
   sender: SchoolUser,
@@ -27,13 +28,13 @@ export const sendMessage = async (
   try {
     const isClassMessage = !!classId;
     let participants: string[] = [];
+
     if (isClassMessage) {
       const students = await getUsersByClass(classId);
-      const teacher = await getTeacherByClass(classId);
-      participants = students.map(s => s.uid);
-      if (teacher && !participants.includes(teacher.uid)) {
-        participants.push(teacher.uid);
-      }
+      const courses = await getCoursesByClass(classId);
+      const teacherIds = [...new Set(courses.map(c => c.teacherId))];
+      const studentIds = students.map(s => s.uid);
+      participants = [...new Set([...studentIds, ...teacherIds])];
     } else if (recipientId) {
       participants = [sender.uid, recipientId].sort();
     }

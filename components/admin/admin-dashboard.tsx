@@ -5,17 +5,20 @@ import { useAuth } from "@/hooks/use-auth"
 import { AdminStats } from "./admin-stats"
 import { UserManagement } from "./user-management"
 import { ClassManagement } from "./class-management"
+import { CourseManagement } from "./course-management" // Importation
 import { MessageModeration } from "./message-moderation"
 import { SystemSettings } from "./system-settings"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, Menu, X } from "lucide-react"
+import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, Menu, X, BookCopy } from "lucide-react" // Importation
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 
+type AdminTab = "stats" | "users" | "classes" | "courses" | "messages" | "settings"; // Mise à jour du type
+
 export function AdminDashboard() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<"stats" | "users" | "classes" | "messages" | "settings">("stats")
+  const [activeTab, setActiveTab] = useState<AdminTab>("stats") // Utilisation du nouveau type
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
 
@@ -28,7 +31,7 @@ export function AdminDashboard() {
     router.push("/dashboard")
   }
 
-  const handleTabChange = (tab: "stats" | "users" | "classes" | "messages" | "settings") => {
+  const handleTabChange = (tab: AdminTab) => { // Mise à jour du type
     setActiveTab(tab)
     setSidebarOpen(false) // Fermer la sidebar sur mobile
   }
@@ -81,6 +84,17 @@ export function AdminDashboard() {
         >
           <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
           Gestion Classes
+        </Button>
+
+        {/* Bouton Gestion Cours */}
+        <Button
+          variant={activeTab === "courses" ? "default" : "ghost"}
+          className="w-full justify-start text-xs sm:text-sm"
+          size="sm"
+          onClick={() => handleTabChange("courses")}
+        >
+          <BookCopy className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
+          Gestion Cours
         </Button>
 
         <Button
@@ -167,6 +181,7 @@ export function AdminDashboard() {
           {activeTab === "stats" && <AdminStats />}
           {activeTab === "users" && <UserManagement />}
           {activeTab === "classes" && <ClassManagement />}
+          {activeTab === "courses" && <CourseManagement />}
           {activeTab === "messages" && <MessageModeration />}
           {activeTab === "settings" && <SystemSettings />}
         </div>

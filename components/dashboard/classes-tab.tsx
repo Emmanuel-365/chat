@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Users, MessageCircle, BookOpen } from "lucide-react"
-import { getClasses, getClassesByTeacher, createClass, getClassById } from "@/lib/classes"
-import { getUsersByClass, getTeacherByClass } from "@/lib/contacts"
+import { getClasses, createClass, getClassById } from "@/lib/classes"
+import { getUsersByClass } from "@/lib/contacts"
+import { getCoursesByTeacher } from "@/lib/courses"
 import type { Class, SchoolUser } from "@/types/user"
 
 interface ClassesTabProps {
@@ -35,7 +36,11 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
       if (currentUser.role === "admin") {
         classesData = await getClasses()
       } else if (currentUser.role === "teacher") {
-        classesData = await getClassesByTeacher(currentUser.uid)
+        // Un professeur voit toutes les classes dans lesquelles il donne un cours.
+        const courses = await getCoursesByTeacher(currentUser.uid);
+        const classIds = [...new Set(courses.flatMap(c => c.classIds))];
+        const classPromises = classIds.map(id => getClassById(id));
+        classesData = (await Promise.all(classPromises)).filter(c => c !== null) as Class[];
       } else if (currentUser.role === "student" && currentUser.studentProfile?.classId) {
         const studentClass = await getClassById(currentUser.studentProfile.classId)
         if (studentClass) {
@@ -54,7 +59,8 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
     if (!newClassName.trim() || !newClassGrade.trim()) return
 
     setCreating(true)
-    const { success, classId } = await createClass(newClassName.trim(), newClassGrade, currentUser.uid)
+    // Appel à la fonction createClass mise à jour
+    const { success } = await createClass(newClassName.trim(), newClassGrade)
 
     if (success) {
       setNewClassName("")
@@ -62,14 +68,8 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
       setShowCreateDialog(false)
 
       // Recharger les classes
-      const newClass = {
-        id: classId!,
-        name: newClassName.trim(),
-        grade: newClassGrade,
-        teacherId: currentUser.uid,
-        createdAt: new Date(),
-      }
-      setClasses((prevClasses) => [...prevClasses, newClass])
+      const updatedClasses = await getClasses()
+      setClasses(updatedClasses)
     }
 
     setCreating(false)
@@ -77,16 +77,7 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
 
   const ClassCard = ({ classData }: { classData: Class }) => {
     const [students, setStudents] = useState<SchoolUser[]>([])
-    const [teacher, setTeacher] = useState<SchoolUser | null>(null)
     const [studentsLoaded, setStudentsLoaded] = useState(false)
-
-    useEffect(() => {
-      const getTeacher = async () => {
-        const teacherData = await getTeacherByClass(classData.id)
-        setTeacher(teacherData)
-      }
-      getTeacher()
-    }, [classData.id])
 
     const loadStudents = async () => {
       if (!studentsLoaded) {
@@ -110,11 +101,6 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
           </div>
         </CardHeader>
         <CardContent className="space-y-2 sm:space-y-3">
-          <div className="flex items-center justify-between text-xs sm:text-sm">
-            <span className="text-muted-foreground">Professeur:</span>
-            <span className="font-medium truncate ml-2">{teacher?.displayName}</span>
-          </div>
-
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <Button
               size="sm"
@@ -180,9 +166,9 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold">Classes</h2>
+          <h2 className="text-lg sm:text-xl font-semibold">Mes Classes</h2>
         </div>
-        {(currentUser.role === "admin" || currentUser.role === "teacher") && (
+        {(currentUser.role === "admin") && (
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button size="sm" className="w-full sm:w-auto">
@@ -201,7 +187,7 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
                   </Label>
                   <Input
                     id="className"
-                    placeholder="ex: 6ème A, Terminale S..."
+                    placeholder="ex: L1 Informatique..."
                     value={newClassName}
                     onChange={(e) => setNewClassName(e.target.value)}
                     className="text-sm"
@@ -258,13 +244,8 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
             <div className="text-center py-8">
               <BookOpen className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground text-sm sm:text-base">
-                {currentUser.role === "student" ? "Vous n'êtes inscrit dans aucune classe pour le moment." : "Aucune classe créée"}
+                {currentUser.role === "student" ? "Vous n'êtes inscrit dans aucune classe pour le moment." : "Aucune classe à afficher."}
               </p>
-              {(currentUser.role === "admin" || currentUser.role === "teacher") && (
-                <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                  Créez votre première classe pour commencer
-                </p>
-              )}
             </div>
           ) : (
             classes.map((classData) => <ClassCard key={classData.id} classData={classData} />)
@@ -274,4 +255,3 @@ export function ClassesTab({ currentUser, onStartClassConversation }: ClassesTab
     </div>
   )
 }
-

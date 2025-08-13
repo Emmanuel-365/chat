@@ -16,14 +16,12 @@ import type { Class, SchoolUser } from "@/types/user";
 
 export const createClass = async (
   name: string,
-  grade: string,
-  teacherId: string
+  grade: string
 ): Promise<{ success: boolean; error?: string; classId?: string }> => {
   try {
     const classData = {
       name,
       grade,
-      teacherId,
       createdAt: serverTimestamp(),
     };
 
@@ -71,30 +69,6 @@ export const getClassById = async (classId: string): Promise<Class | null> => {
   } catch (error) {
     console.error("Erreur lors de la récupération de la classe:", error);
     return null;
-  }
-};
-
-export const getClassesByTeacher = async (teacherId: string): Promise<Class[]> => {
-  try {
-    const q = query(
-      collection(db, "classes"),
-      where("teacherId", "==", teacherId),
-      orderBy("grade"),
-      orderBy("name")
-    );
-    const snapshot = await getDocs(q);
-
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-    })) as Class[];
-  } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des classes du professeur:",
-      error
-    );
-    return [];
   }
 };
 
