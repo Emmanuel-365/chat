@@ -18,9 +18,35 @@ export const createInvitation = async (email: string, role: UserRole, createdBy:
     };
 
     const docRef = await addDoc(collection(db, "invitations"), invitationData);
+
+    // Call the Next.js API route to send the email
+    try {
+      const apiResponse = await fetch('/api/send-invitation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: invitationData.email,
+          displayName: invitationData.displayName,
+          role: invitationData.role,
+          invitationId: docRef.id,
+        }),
+      });
+
+      const apiResult = await apiResponse.json();
+      if (!apiResult.success) {
+        logger.error({ apiResult }, 'Failed to trigger email sending via API route - Inner Catch');
+        // Optionally, throw an error or handle it more gracefully
+      }
+    } catch (apiError: any) {
+      logger.error({ apiError }, 'Error calling send-invitation API route - Inner Catch');
+      // Optionally, throw an error or handle it more gracefully
+    }
+
     return { success: true, invitationId: docRef.id };
-  } catch (error: unknown) {
-    logger.error({ err: error }, "Error creating invitation");
+  } catch (error: any) {
+    logger.error({ error }, "Error creating invitation - Outer Catch");
     let errorMessage = "An unknown error occurred.";
     if (error instanceof Error) {
       errorMessage = error.message;

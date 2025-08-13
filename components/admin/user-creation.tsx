@@ -52,6 +52,7 @@ export function UserCreation() {
       formData.email,
       formData.role,
       user.uid,
+      formData.displayName,
       studentProfile
     );
 
