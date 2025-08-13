@@ -37,6 +37,10 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
+  // State for file preview
+  const [fileToPreview, setFileToPreview] = useState<File | null>(null);
+  const [caption, setCaption] = useState("");
+
   // Déterminer le type de conversation et les paramètres
   const isDirectMessage = !conversationId.startsWith("class-")
   const recipientId = isDirectMessage ? conversationId.split("-").find((id) => id !== currentUser.uid) : undefined
@@ -96,9 +100,17 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      setFileToPreview(file);
+    }
+  };
+
+  const handleSendFile = async () => {
+    if (!fileToPreview) return;
+
+    const file = fileToPreview;
 
     setIsUploading(true);
     setUploadError(null);
@@ -151,17 +163,20 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
         ...(cloudinaryData.duration && { duration: cloudinaryData.duration }),
       };
 
-      // 4. Send message with attachment
-      const result = await sendMessage(currentUser, "", attachment, recipientId, classId);
+      // 4. Send message with attachment and caption
+      const result = await sendMessage(currentUser, caption, attachment, recipientId, classId);
       if (!result.success) {
         throw new Error(result.error || "Impossible d'enregistrer le message dans la base de données.");
       }
+
+      // 5. Reset state
+      setFileToPreview(null);
+      setCaption("");
 
     } catch (err: any) {
       setUploadError(err.message || 'Erreur lors de l\'envoi du fichier.');
     } finally {
       setIsUploading(false);
-      // Reset file input
       if(fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -230,6 +245,50 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     }
   }
 
+  const handleCancelPreview = () => {
+    setFileToPreview(null);
+    setCaption("");
+    if(fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  // Si un fichier est en cours de prévisualisation, afficher l'écran de prévisualisation
+  if (fileToPreview) {
+    const fileUrl = URL.createObjectURL(fileToPreview);
+    return (
+      <div className="flex flex-col h-full bg-gray-800 text-white">
+        <div className="p-3 flex items-center justify-between bg-gray-900">
+          <Button variant="ghost" onClick={handleCancelPreview}>Annuler</Button>
+          <h3 className="font-semibold">Aperçu</h3>
+          <div className="w-20"></div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          {fileToPreview.type.startsWith('image') ? (
+            <img src={fileUrl} alt="Aperçu" className="max-h-full max-w-full object-contain" />
+          ) : fileToPreview.type.startsWith('video') ? (
+            <video src={fileUrl} controls className="max-h-full max-w-full" />
+          ) : (
+            <div className="text-center">
+              <File className="h-16 w-16 mx-auto" />
+              <p className="mt-2">{fileToPreview.name}</p>
+            </div>
+          )}
+        </div>
+        <div className="p-2 bg-gray-900 flex items-center space-x-2">
+          <Input 
+            placeholder="Ajouter une légende..."
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white"
+          />
+          <Button onClick={handleSendFile} disabled={isUploading} size="icon" className="rounded-full bg-green-600 hover:bg-green-700">
+            {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Sinon, afficher la vue de chat normale
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
