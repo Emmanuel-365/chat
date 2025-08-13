@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Overview
 
-## Getting Started
+This is a Next.js project bootstrapped with `create-next-app`. It is a secure messaging platform for a school, called "EcoleChat".
 
-First, run the development server:
+## Main Technologies
+
+*   **Framework:** [Next.js](https://nextjs.org/) 15
+*   **Language:** [TypeScript](https://www.typescriptlang.org/)
+*   **Backend:** [Firebase](https://firebase.google.com/) (Authentication, Firestore, Storage)
+*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) with [shadcn/ui](https://ui.shadcn.com/) components
+*   **Icons:** [Lucide React](https://lucide.dev/guide/packages/lucide-react)
+*   **Linting:** [ESLint](https://eslint.org/)
+
+## Architecture
+
+The project follows the standard Next.js App Router structure.
+
+*   `app/`: Contains the pages of the application.
+    *   `app/api/`: Contains the API routes.
+    *   `app/dashboard/`: Contains the main dashboard for authenticated users.
+    *   `app/admin/`: Contains the admin dashboard.
+*   `components/`: Contains the React components.
+    *   `components/ui/`: Contains the shadcn/ui components.
+    *   `components/auth/`: Contains authentication-related components.
+    *   `components/dashboard/`: Contains components for the main dashboard.
+    *   `components/admin/`: Contains components for the admin dashboard.
+*   `lib/`: Contains the core logic of the application.
+    *   `lib/firebase.ts`: Initializes Firebase.
+    *   `lib/auth.ts`: Contains authentication-related functions.
+    *   `lib/messages.ts`: Contains functions for sending and receiving messages.
+*   `hooks/`: Contains custom React hooks.
+*   `types/`: Contains TypeScript type definitions.
+
+# Building and Running
+
+## Prerequisites
+
+*   [Node.js](https://nodejs.org/) (version 20 or higher)
+*   [npm](https://www.npmjs.com/), [yarn](https://yarnpkg.com/), [pnpm](https://pnpm.io/), or [bun](https://bun.sh/)
+
+## Installation
+
+```bash
+npm install
+```
+
+## Running the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Building for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+## Starting the Production Server
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Linting
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run lint
+```
 
-## Deploy on Vercel
+# Development Conventions
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*   **Coding Style:** The project uses the Next.js ESLint configuration for code style.
+*   **Testing:** There are no testing practices defined in the project yet.
+*   **Contribution:** There are no contribution guidelines defined in the project yet.
