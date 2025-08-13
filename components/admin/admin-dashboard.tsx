@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, BookCopy } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
 
 type AdminTab = "stats" | "users" | "classes" | "courses" | "messages" | "settings";
 
@@ -49,7 +50,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2">
+      <div className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2 overflow-y-auto">
         <Button
           variant={activeTab === "stats" ? "default" : "ghost"}
           className="w-full justify-start text-xs sm:text-sm"
@@ -112,7 +113,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Footer */}
-      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 space-y-1 sm:space-y-2">
+      <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 space-y-1 sm:space-y-2 mt-auto">
         <Button
           variant="outline"
           className="w-full justify-start bg-transparent text-xs sm:text-sm"
@@ -137,24 +138,23 @@ export function AdminDashboard() {
   )
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-gray-900">
-      {/* Static Sidebar */}
-      <div className="flex w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
-        <SidebarContent />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === "stats" && <AdminStats />}
-          {activeTab === "users" && <UserManagement />}
-          {activeTab === "classes" && <ClassManagement />}
-          {activeTab === "courses" && <CourseManagement />}
-          {activeTab === "messages" && <MessageModeration />}
-          {activeTab === "settings" && <SystemSettings />}
-        </div>
-      </div>
-    </div>
+    <PanelGroup direction="horizontal" className="h-screen bg-gray-50 dark:bg-gray-900">
+        <Panel defaultSize={25} minSize={20} maxSize={35}>
+            <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
+                <SidebarContent />
+            </div>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
+        <Panel>
+            <div className="flex-1 h-full overflow-y-auto">
+                {activeTab === "stats" && <AdminStats />}
+                {activeTab === "users" && <UserManagement />}
+                {activeTab === "classes" && <ClassManagement />}
+                {activeTab === "courses" && <CourseManagement />}
+                {activeTab === "messages" && <MessageModeration />}
+                {activeTab === "settings" && <SystemSettings />}
+            </div>
+        </Panel>
+    </PanelGroup>
   )
 }

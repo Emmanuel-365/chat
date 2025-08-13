@@ -7,17 +7,19 @@ import { ChatWindow } from "./chat-window"
 import { UserProfile } from "./user-profile"
 import { ContactsTab } from "./contacts-tab"
 import { ClassesTab } from "./classes-tab"
-import { CoursesTab } from "./courses-tab" // Ajout
+import { CoursesTab } from "./courses-tab"
 import { UserSettings } from "@/components/settings/user-settings"
 import { NotificationCenter } from "@/components/notifications/notification-center"
 import { MessageSearch } from "@/components/search/message-search"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { MessageCircle, Users, Settings, LogOut, BookOpen, Shield, BookCopy } from "lucide-react" // Ajout
+import { MessageCircle, Users, Settings, LogOut, BookOpen, Shield, BookCopy } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
+import type { SchoolUser } from "@/types/user"
 
-type DashboardTab = "messages" | "contacts" | "classes" | "courses" | "settings"; // Ajout
+type DashboardTab = "messages" | "contacts" | "classes" | "courses" | "settings";
 
 export function DashboardLayout() {
   const { user } = useAuth()
@@ -46,7 +48,6 @@ export function DashboardLayout() {
     setActiveTab("messages")
   }
 
-  // Ajout de la nouvelle fonction
   const handleStartCourseConversation = (courseId: string) => {
     const conversationId = `course-${courseId}`;
     setSelectedConversation(conversationId);
@@ -118,7 +119,6 @@ export function DashboardLayout() {
           <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
           <span className="truncate">Classes</span>
         </Button>
-        {/* Ajout de l'onglet Cours */}
         {(user.role === 'student' || user.role === 'teacher') && (
             <Button
                 variant={activeTab === "courses" ? "default" : "ghost"}
@@ -142,7 +142,7 @@ export function DashboardLayout() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
         {activeTab === "messages" && (
           <ConversationList
             currentUser={user}
@@ -169,32 +169,34 @@ export function DashboardLayout() {
   )
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-gray-900">
-      {/* Static Sidebar */}
-      <div className="flex w-80 lg:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
-        <SidebarContent />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {selectedConversation ? (
-          <ChatWindow
-            conversationId={selectedConversation}
-            currentUser={user}
-            onBack={() => setSelectedConversation(null)}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center p-4">
-            <Card className="p-6 sm:p-8 text-center max-w-md mx-auto">
-              <MessageCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-base sm:text-lg font-semibold mb-2">Sélectionnez une conversation</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Choisissez une conversation dans la liste pour commencer à discuter.
-              </p>
-            </Card>
-          </div>
-        )}
-      </div>
-    </div>
+    <PanelGroup direction="horizontal" className="h-screen bg-gray-50 dark:bg-gray-900">
+      <Panel defaultSize={30} minSize={25} maxSize={40}>
+        <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
+          <SidebarContent />
+        </div>
+      </Panel>
+      <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
+      <Panel>
+        <div className="flex-1 flex flex-col h-full min-w-0">
+          {selectedConversation ? (
+            <ChatWindow
+              conversationId={selectedConversation}
+              currentUser={user}
+              onBack={() => setSelectedConversation(null)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <Card className="p-6 sm:p-8 text-center max-w-md mx-auto">
+                <MessageCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-base sm:text-lg font-semibold mb-2">Sélectionnez une conversation</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Choisissez une conversation dans la liste pour commencer à discuter.
+                </p>
+              </Card>
+            </div>
+          )}
+        </div>
+      </Panel>
+    </PanelGroup>
   )
 }
