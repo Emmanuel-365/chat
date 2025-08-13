@@ -98,7 +98,16 @@ export const getContactsForUser = async (user: SchoolUser): Promise<{ [key: stri
         getUsersByRole('admin'),
         getUsersByRole('staff'),
       ]);
-      return { students, teachers, admins, staff };
+      return { 'Étudiants': students, 'Professeurs': teachers, 'Admins': admins, 'Personnel': staff };
+    }
+
+    if (user.role === 'staff') {
+        const [students, teachers, staff] = await Promise.all([
+          getUsersByRole('student'),
+          getUsersByRole('teacher'),
+          getUsersByRole('staff', user.uid),
+        ]);
+        return { 'Étudiants': students, 'Professeurs': teachers, 'Personnel': staff };
     }
   
     if (user.role === 'teacher') {

@@ -240,6 +240,7 @@ export function UserManagement() {
             <SelectItem value="all">Tous les rôles</SelectItem>
             <SelectItem value="student">Étudiants</SelectItem>
             <SelectItem value="teacher">Professeurs</SelectItem>
+            <SelectItem value="staff">Personnel</SelectItem>
             <SelectItem value="admin">Administrateurs</SelectItem>
           </SelectContent>
         </Select>
@@ -285,13 +286,14 @@ export function UserManagement() {
 
               <div>
                 <label className="text-sm font-medium">Rôle</label>
-                <Select value={editingRole} onValueChange={(value: "student" | "teacher" | "admin") => setEditingRole(value)}>
+                <Select value={editingRole} onValueChange={(value: UserRole) => setEditingRole(value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="student">Étudiant</SelectItem>
                     <SelectItem value="teacher">Professeur</SelectItem>
+                    <SelectItem value="staff">Personnel</SelectItem>
                     <SelectItem value="admin">Administrateur</SelectItem>
                   </SelectContent>
                 </Select>
