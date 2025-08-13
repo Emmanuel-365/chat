@@ -310,7 +310,7 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
                       : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
                   }`}
                 >
-                  {!isOwnMessage && message.senderDisplayName && (
+                  {!isOwnMessage && (conversationDetails.type === 'class' || conversationDetails.type === 'course') && message.senderDisplayName && (
                     <p className="text-xs font-medium mb-1 opacity-70">{message.senderDisplayName}</p>
                   )}
                   {message.content && <p className="text-sm break-words">{message.content}</p>}

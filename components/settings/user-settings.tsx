@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { EditableAvatar } from "@/components/auth/editable-avatar";
 import { Badge } from "@/components/ui/badge"
 import { User, Bell, Sun, Shield, Save } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
@@ -69,10 +69,7 @@ export function UserSettings() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-            <Avatar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto sm:mx-0">
-              <AvatarImage src={user.profilePicture || "/placeholder.svg"} />
-              <AvatarFallback className="text-sm sm:text-lg">{initials}</AvatarFallback>
-            </Avatar>
+            <EditableAvatar user={user} />
             <div className="space-y-1 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-2">
                 <h3 className="font-medium text-sm sm:text-base">{user.displayName}</h3>

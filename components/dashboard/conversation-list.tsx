@@ -5,12 +5,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, BookOpen, BookCopy } from "lucide-react"
 import { subscribeToConversations } from "@/lib/messages"
-import type { Conversation } from "@/types/user"
+import type { Conversation, SchoolUser } from "@/types/user"
 
 interface ConversationListProps {
   userId: string
+  currentUser: SchoolUser // Ajout
   selectedConversation: string | null
   onSelectConversation: (conversationId: string) => void
   onNewConversationClick: () => void
@@ -18,6 +19,7 @@ interface ConversationListProps {
 
 export function ConversationList({ 
   userId, 
+  currentUser, // Ajout
   selectedConversation, 
   onSelectConversation, 
   onNewConversationClick 
@@ -37,9 +39,18 @@ export function ConversationList({
     return () => unsubscribe();
   }, [userId])
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.participantNames.some((name) => name.toLowerCase().includes(searchTerm.toLowerCase())),
-  )
+  const getConversationName = (conv: Conversation) => {
+    if (conv.type === 'course') return conv.courseName || 'Cours';
+    if (conv.type === 'class') return conv.className || 'Classe';
+    // Utilise maintenant currentUser qui est disponible
+    return conv.participantNames.find(name => name !== currentUser.displayName) || conv.participantNames[0] || 'Conversation';
+  };
+
+  const filteredConversations = conversations.filter((conv) => {
+    const name = getConversationName(conv).toLowerCase();
+    const term = searchTerm.toLowerCase();
+    return name.includes(term);
+  });
 
   const formatTime = (date: Date) => {
     const now = new Date()
@@ -47,19 +58,11 @@ export function ConversationList({
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
     if (days === 0) {
-      return date.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     } else if (days === 1) {
       return "Hier"
-    } else if (days < 7) {
-      return date.toLocaleDateString("fr-FR", { weekday: "short" })
     } else {
-      return date.toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-      })
+      return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })
     }
   }
 
@@ -67,7 +70,7 @@ export function ConversationList({
     return (
       <div className="p-4">
         <div className="animate-pulse space-y-4">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
               <div className="flex-1 space-y-2">
@@ -83,7 +86,6 @@ export function ConversationList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
       <div className="p-4 space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -100,7 +102,6 @@ export function ConversationList({
         </Button>
       </div>
 
-      {/* Conversations */}
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-2">
           {filteredConversations.length === 0 ? (
@@ -108,44 +109,45 @@ export function ConversationList({
               <p className="text-sm text-muted-foreground">Aucune conversation</p>
             </div>
           ) : (
-            filteredConversations.map((conversation) => (
-              <Button
-                key={conversation.id}
-                variant={selectedConversation === conversation.id ? "secondary" : "ghost"}
-                className="w-full justify-start h-auto p-3"
-                onClick={() => onSelectConversation(conversation.id)}
-              >
-                <div className="flex items-center space-x-3 w-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {conversation.type === "class" ? "C" : conversation.participantNames[0]?.[0] || "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate">
-                        {conversation.type === "class" ? conversation.className : conversation.participantNames[0]}
+            filteredConversations.map((conversation) => {
+              const name = getConversationName(conversation);
+              return (
+                <Button
+                  key={conversation.id}
+                  variant={selectedConversation === conversation.id ? "secondary" : "ghost"}
+                  className="w-full justify-start h-auto p-3"
+                  onClick={() => onSelectConversation(conversation.id)}
+                >
+                  <div className="flex items-center space-x-3 w-full">
+                    <Avatar className="h-10 w-10">
+                      {conversation.type === 'class' && <AvatarFallback><BookOpen/></AvatarFallback>}
+                      {conversation.type === 'course' && <AvatarFallback><BookCopy/></AvatarFallback>}
+                      {conversation.type === 'direct' && <AvatarFallback>{name?.[0]?.toUpperCase()}</AvatarFallback>}
+                    </Avatar>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium truncate">{name}</p>
+                        {conversation.lastMessageTime && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatTime(conversation.lastMessageTime)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conversation.lastMessage || "Aucun message"}
                       </p>
-                      {conversation.lastMessageTime && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(conversation.lastMessageTime)}
-                        </span>
+                      {(conversation.unreadCounts?.[userId] || 0) > 0 && (
+                        <div className="flex justify-end mt-1">
+                          <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                            {conversation.unreadCounts?.[userId] || 0}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {conversation.lastMessage || "Aucun message"}
-                    </p>
-                    {(conversation.unreadCounts?.[userId] || 0) > 0 && (
-                      <div className="flex justify-end mt-1">
-                        <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                          {conversation.unreadCounts?.[userId] || 0}
-                        </span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </Button>
-            ))
+                </Button>
+              )
+            })
           )}
         </div>
       </ScrollArea>

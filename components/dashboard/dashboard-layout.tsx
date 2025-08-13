@@ -145,6 +145,7 @@ export function DashboardLayout() {
       <div className="flex-1 overflow-hidden">
         {activeTab === "messages" && (
           <ConversationList
+            currentUser={user}
             userId={user.uid}
             selectedConversation={selectedConversation}
             onSelectConversation={setSelectedConversation}
