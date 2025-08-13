@@ -8,6 +8,7 @@ export const getAllUsers = async (): Promise<SchoolUser[]> => {
     const snapshot = await getDocs(q);
 
     return snapshot.docs.map((doc) => ({
+      uid: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       lastSeen: doc.data().lastSeen?.toDate(),
@@ -57,6 +58,7 @@ export const getUsersByClass = async (classId: string): Promise<SchoolUser[]> =>
     const snapshot = await getDocs(q);
 
     return snapshot.docs.map((doc) => ({
+      uid: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       lastSeen: doc.data().lastSeen?.toDate(),
