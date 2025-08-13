@@ -14,140 +14,131 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Message, SchoolUser, Conversation, Class, Attachment } from "@/types/user";
+import type { Message, SchoolUser, Conversation, Class, Course, Attachment } from "@/types/user";
 import { getUserById, getUsersByClass } from "./contacts";
-import { getCoursesByClass } from "./courses";
+import { getCoursesByClass, getCourseById } from "./courses";
+
+interface SendMessageIds {
+  recipientId?: string;
+  classId?: string;
+  courseId?: string;
+}
 
 export const sendMessage = async (
   sender: SchoolUser,
-  content: string, // Le contenu textuel, peut être vide
-  attachment: Attachment | null, // La nouvelle pièce jointe
-  recipientId?: string,
-  classId?: string
+  content: string,
+  attachment: Attachment | null,
+  ids: SendMessageIds
 ) => {
-  try {
-    const isClassMessage = !!classId;
-    let participants: string[] = [];
+  const { recipientId, classId, courseId } = ids;
 
-    if (isClassMessage) {
+  try {
+    let participants: string[] = [];
+    let conversationId: string = '';
+    let messageType: Message['type'] = 'direct';
+    let conversationType: Conversation['type'] = 'direct';
+
+    // Déterminer les participants et le type de conversation
+    if (courseId) {
+      const course = await getCourseById(courseId);
+      if (!course) throw new Error("Course not found");
+      const students = (await Promise.all(course.classIds.map(cid => getUsersByClass(cid)))).flat();
+      const studentIds = students.map(s => s.uid);
+      participants = [...new Set([course.teacherId, ...studentIds])];
+      conversationId = `course-${courseId}`;
+      messageType = 'course';
+      conversationType = 'course';
+    } else if (classId) {
       const students = await getUsersByClass(classId);
       const courses = await getCoursesByClass(classId);
       const teacherIds = [...new Set(courses.map(c => c.teacherId))];
       const studentIds = students.map(s => s.uid);
       participants = [...new Set([...studentIds, ...teacherIds])];
+      conversationId = `class-${classId}`;
+      messageType = 'class';
+      conversationType = 'class';
     } else if (recipientId) {
       participants = [sender.uid, recipientId].sort();
+      conversationId = participants.join("-");
+      messageType = 'direct';
+      conversationType = 'direct';
+    } else {
+      throw new Error("No recipient, class, or course ID provided.");
     }
 
+    // Créer le message
     const messageData: Omit<Message, "id" | "timestamp"> & { timestamp: any } = {
       senderId: sender.uid,
       senderDisplayName: sender.displayName || sender.email,
       senderRole: sender.role,
-      content,
+      content: content || '',
+      attachment,
       timestamp: serverTimestamp(),
       isRead: false,
-      type: isClassMessage ? "class" : "direct",
+      type: messageType,
       participants,
-      ...(attachment && { attachment }),
+      ...(recipientId && { recipientId }),
+      ...(classId && { classId }),
+      ...(courseId && { courseId }),
     };
-
-    if (recipientId) {
-      messageData.recipientId = recipientId;
-    }
-    if (classId) {
-      messageData.classId = classId;
-    }
-
     await addDoc(collection(db, "messages"), messageData);
 
-    // Update conversation
-    let conversationId: string;
-    if (recipientId) {
-      conversationId = participants.join("-");
-    } else {
-      conversationId = `class-${classId}`;
-    }
-
+    // Mettre à jour ou créer la conversation
     const conversationRef = doc(db, "conversations", conversationId);
     const conversationSnap = await getDoc(conversationRef);
 
-    if (conversationSnap.exists()) {
-      const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
-      const participantNames = participantUsers.filter(p => p).map(p => p!.displayName || p!.email!);
-      
-      let lastMessageText = content;
-      if (attachment) {
-        switch (attachment.type) {
-          case 'image': lastMessageText = '📷 Photo'; break;
-          case 'video': lastMessageText = '📹 Vidéo'; break;
-          case 'audio': lastMessageText = '🎵 Audio'; break;
-          default: lastMessageText = '📎 Fichier'; break;
-        }
+    let lastMessageText = content;
+    if (attachment) {
+      switch (attachment.type) {
+        case 'image': lastMessageText = '📷 Photo'; break;
+        case 'video': lastMessageText = '📹 Vidéo'; break;
+        case 'audio': lastMessageText = '🎵 Audio'; break;
+        default: lastMessageText = '📎 Fichier'; break;
       }
+    }
 
-      const updateData: { [key: string]: any } = {
+    const unreadCountsUpdate: { [key: string]: any } = {};
+    participants.forEach(pId => {
+      if (pId !== sender.uid) {
+        unreadCountsUpdate[`unreadCounts.${pId}`] = increment(1);
+      }
+    });
+
+    if (conversationSnap.exists()) {
+      await updateDoc(conversationRef, {
         lastMessage: lastMessageText,
         lastMessageTime: serverTimestamp(),
-        participants: participants,
-        participantNames: participantNames
-      };
-
-      // Increment count for all participants except the sender
-      participants.forEach(participantId => {
-        if (participantId !== sender.uid) {
-          updateData[`unreadCounts.${participantId}`] = increment(1);
-        }
+        participants,
+        ...unreadCountsUpdate,
       });
-
-      await updateDoc(conversationRef, updateData);
     } else {
       const unreadCounts: { [key: string]: number } = {};
-      participants.forEach(participantId => {
-        unreadCounts[participantId] = participantId === sender.uid ? 0 : 1;
+      participants.forEach(pId => {
+        unreadCounts[pId] = pId === sender.uid ? 0 : 1;
       });
 
-      let conversationData: Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: any };
-      if (isClassMessage) {
+      const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
+      const participantNames = participantUsers.filter(Boolean).map(p => p!.displayName || p!.email!);
+
+      const conversationData: Partial<Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: any }> = {
+        participants,
+        participantNames,
+        lastMessage: lastMessageText,
+        lastMessageTime: serverTimestamp(),
+        unreadCounts,
+        type: conversationType,
+      };
+
+      if (courseId) {
+        const course = await getCourseById(courseId);
+        conversationData.courseId = courseId;
+        conversationData.courseName = course?.name;
+      } else if (classId) {
         const classDoc = await getDoc(doc(db, "classes", classId));
-        const className = (classDoc.data() as Class)?.name || classId;
-        const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
-        const participantNames = participantUsers.filter(p => p).map(p => p!.displayName || p!.email!);
-
-        conversationData = {
-          participants,
-          participantNames,
-          lastMessage: content,
-          lastMessageTime: serverTimestamp(),
-          unreadCounts,
-          type: "class",
-          className,
-          classId: classId,
-        };
-      } else {
-        const recipient = recipientId ? await getUserById(recipientId) : null;
-
-        let lastMessageText = content;
-        if (attachment) {
-          switch (attachment.type) {
-            case 'image': lastMessageText = '📷 Photo'; break;
-            case 'video': lastMessageText = '📹 Vidéo'; break;
-            case 'audio': lastMessageText = '🎵 Audio'; break;
-            default: lastMessageText = '📎 Fichier'; break;
-          }
-        }
-
-        conversationData = {
-          participants: participants,
-          participantNames: [
-            sender.displayName || sender.email,
-            recipient?.displayName || recipient?.email || "Utilisateur supprimé",
-          ].sort(),
-          lastMessage: lastMessageText,
-          lastMessageTime: serverTimestamp(),
-          unreadCounts,
-          type: "direct",
-        };
+        conversationData.classId = classId;
+        conversationData.className = (classDoc.data() as Class)?.name;
       }
+
       await setDoc(conversationRef, conversationData);
     }
 
@@ -163,14 +154,13 @@ export const sendMessage = async (
 
 export const subscribeToMessages = (
   userId: string,
-  recipientId?: string,
-  classId?: string,
-  callback?: (messages: Message[]) => void
+  ids: { recipientId?: string; classId?: string; courseId?: string },
+  callback: (messages: Message[]) => void
 ): Unsubscribe | undefined => {
+  const { recipientId, classId, courseId } = ids;
   let q;
 
   if (recipientId) {
-    const conversationId = [userId, recipientId].sort().join('-');
     q = query(
       collection(db, "messages"),
       where("type", "==", "direct"),
@@ -178,37 +168,34 @@ export const subscribeToMessages = (
       orderBy("timestamp", "asc")
     );
   } else if (classId) {
-    // Class messages
     q = query(
       collection(db, "messages"),
       where("classId", "==", classId),
       where("type", "==", "class"),
       orderBy("timestamp", "asc")
     );
+  } else if (courseId) {
+    q = query(
+      collection(db, "messages"),
+      where("courseId", "==", courseId),
+      where("type", "==", "course"),
+      orderBy("timestamp", "asc")
+    );
   } else {
     return;
   }
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    try {
-      const messages: Message[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        messages.push({
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate() || new Date(),
-        } as Message);
-      });
-      if (callback) {
-        callback(messages);
-      }
-    } catch (error) {
-      console.error("Error processing messages snapshot:", error);
-    }
+  return onSnapshot(q, (snapshot) => {
+    const messages: Message[] = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      timestamp: doc.data().timestamp?.toDate() || new Date(),
+    } as Message));
+    callback(messages);
+  }, (error) => {
+    console.error("Error subscribing to messages:", error);
+    callback([]);
   });
-
-  return unsubscribe;
 };
 
 export const subscribeToConversations = (
@@ -222,31 +209,23 @@ export const subscribeToConversations = (
   );
 
   return onSnapshot(q, (snapshot) => {
-    try {
-      const conversations: Conversation[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        lastMessageTime: doc.data().lastMessageTime?.toDate(),
-      })) as Conversation[];
-      callback(conversations);
-    } catch (error) {
-      console.error("Error processing conversations snapshot:", error);
-      callback([]);
-    }
+    const conversations: Conversation[] = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      lastMessageTime: doc.data().lastMessageTime?.toDate(),
+    })) as Conversation[];
+    callback(conversations);
+  }, (error) => {
+    console.error("Error subscribing to conversations:", error);
+    callback([]);
   });
 };
 
 export const markConversationAsRead = async (conversationId: string, userId: string) => {
   try {
     const conversationRef = doc(db, "conversations", conversationId);
-    // Use dot notation to update only the specific user's unread count.
-    await updateDoc(conversationRef, {
-      [`unreadCounts.${userId}`]: 0,
-    });
+    await updateDoc(conversationRef, { [`unreadCounts.${userId}`]: 0 });
   } catch (error) {
-    console.error(
-      "Erreur lors du marquage de la conversation comme lue:",
-      error
-    );
+    console.error("Erreur lors du marquage de la conversation comme lue:", error);
   }
 };

@@ -1,17 +1,15 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip, Mic, StopCircle, Trash2 } from "lucide-react"
+import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip, Mic, StopCircle, Trash2, File as FileIcon } from "lucide-react"
 import { sendMessage, subscribeToMessages, markConversationAsRead } from "@/lib/messages"
-import type { Attachment, Message } from "@/types/user"
+import type { Attachment, Message, SchoolUser, Course } from "@/types/user"
 import { getUserById } from "@/lib/contacts"
-import type { SchoolUser } from "@/types/user"
+import { getCourseById } from "@/lib/courses"
 import { Alert, AlertDescription } from "../ui/alert"
 import { MessageAttachment } from "./message-attachment"
 
@@ -27,73 +25,95 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
   const [loading, setLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [recipient, setRecipient] = useState<SchoolUser | null>(null);
+  const [conversationTitle, setConversationTitle] = useState("Conversation");
   const [sendError, setSendError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // States for audio recording
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
-  // State for file preview
   const [fileToPreview, setFileToPreview] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
 
-  // Déterminer le type de conversation et les paramètres
-  const isDirectMessage = !conversationId.startsWith("class-")
-  const recipientId = isDirectMessage ? conversationId.split("-").find((id) => id !== currentUser.uid) : undefined
-  const classId = !isDirectMessage ? conversationId.replace("class-", "") : undefined
+  const conversationDetails = useMemo(() => {
+    if (conversationId.startsWith('course-')) {
+      return { type: 'course', id: conversationId.replace('course-', '') };
+    } else if (conversationId.startsWith('class-')) {
+      return { type: 'class', id: conversationId.replace('class-', '') };
+    } else {
+      const recipientId = conversationId.split('-').find(id => id !== currentUser.uid);
+      return { type: 'direct', id: recipientId };
+    }
+  }, [conversationId, currentUser.uid]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToMessages(currentUser.uid, recipientId, classId, (newMessages) => {
+    const ids = {
+      recipientId: conversationDetails.type === 'direct' ? conversationDetails.id : undefined,
+      classId: conversationDetails.type === 'class' ? conversationDetails.id : undefined,
+      courseId: conversationDetails.type === 'course' ? conversationDetails.id : undefined,
+    };
+
+    const unsubscribe = subscribeToMessages(currentUser.uid, ids, (newMessages) => {
       setMessages(newMessages)
-      // Scroll to bottom when new messages arrive
       setTimeout(() => {
         if (scrollAreaRef.current) {
           scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
         }
       }, 100)
-    })
+    });
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe()
-      }
+      if (unsubscribe) unsubscribe();
     }
-  }, [currentUser.uid, recipientId, classId])
+  }, [currentUser.uid, conversationDetails]);
 
   useEffect(() => {
-    const fetchRecipient = async () => {
-      if (recipientId) {
-        const user = await getUserById(recipientId)
-        setRecipient(user)
+    const fetchTitle = async () => {
+      if (conversationDetails.type === 'direct' && conversationDetails.id) {
+        const user = await getUserById(conversationDetails.id);
+        setConversationTitle(user?.displayName || "Conversation directe");
+      } else if (conversationDetails.type === 'course' && conversationDetails.id) {
+        const course = await getCourseById(conversationDetails.id);
+        setConversationTitle(course?.name || "Conversation de cours");
+      } else if (conversationDetails.type === 'class' && conversationDetails.id) {
+        setConversationTitle(`Classe ${conversationDetails.id}`); // Simple fallback
       }
-    }
-    fetchRecipient()
-  }, [recipientId])
+    };
+    fetchTitle();
+  }, [conversationDetails]);
 
   useEffect(() => {
     if (conversationId) {
       markConversationAsRead(conversationId, currentUser.uid);
     }
-  }, [conversationId])
+  }, [conversationId, currentUser.uid]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || loading) return
+  const handleSendMessage = async (attachment: Attachment | null = null, text: string = newMessage) => {
+    if (!text.trim() && !attachment) return;
 
-    setLoading(true)
-    setSendError(null)
-    const { success, error } = await sendMessage(currentUser, newMessage.trim(), recipientId, classId)
+    setLoading(true);
+    setSendError(null);
+
+    const ids = {
+        recipientId: conversationDetails.type === 'direct' ? conversationDetails.id : undefined,
+        classId: conversationDetails.type === 'class' ? conversationDetails.id : undefined,
+        courseId: conversationDetails.type === 'course' ? conversationDetails.id : undefined,
+    };
+
+    const { success, error } = await sendMessage(currentUser, text.trim(), attachment, ids);
 
     if (success) {
-      setNewMessage("")
+      setNewMessage("");
+      setCaption("");
+      setFileToPreview(null);
+      if(fileInputRef.current) fileInputRef.current.value = '';
     } else {
-      setSendError(error || "Impossible d'envoyer le message.")
+      setSendError(error || "Impossible d'envoyer le message.");
     }
-    setLoading(false)
+    setLoading(false);
+    setIsUploading(false);
   }
 
   const handleFileSelect = () => {
@@ -111,12 +131,10 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     if (!fileToPreview) return;
 
     const file = fileToPreview;
-
     setIsUploading(true);
     setUploadError(null);
 
     try {
-      // 1. Get signature from our API
       const response = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,7 +142,6 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
       });
       const { signature, timestamp } = await response.json();
 
-      // 2. Upload file to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
       formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY!); 
@@ -137,21 +154,9 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
       });
       const cloudinaryData = await cloudinaryResponse.json();
 
-      if (cloudinaryData.error) {
-        throw new Error(cloudinaryData.error.message);
-      }
+      if (cloudinaryData.error) throw new Error(cloudinaryData.error.message);
 
-      // 3. Create attachment object
-      let attachmentType: Attachment['type'];
-      if (file.name === 'recording.webm') {
-        attachmentType = 'audio';
-      } else {
-        const resourceType = cloudinaryData.resource_type;
-        if (resourceType === 'image') attachmentType = 'image';
-        else if (resourceType === 'video') attachmentType = 'video';
-        else if (resourceType === 'audio') attachmentType = 'audio';
-        else attachmentType = 'file';
-      }
+      let attachmentType: Attachment['type'] = file.name === 'recording.webm' ? 'audio' : (cloudinaryData.resource_type === 'image' ? 'image' :cloudinaryData.resource_type === 'video' ? 'video' : 'file');
 
       const attachment: Attachment = {
         url: cloudinaryData.secure_url,
@@ -163,21 +168,11 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
         ...(cloudinaryData.duration && { duration: cloudinaryData.duration }),
       };
 
-      // 4. Send message with attachment and caption
-      const result = await sendMessage(currentUser, caption, attachment, recipientId, classId);
-      if (!result.success) {
-        throw new Error(result.error || "Impossible d'enregistrer le message dans la base de données.");
-      }
-
-      // 5. Reset state
-      setFileToPreview(null);
-      setCaption("");
+      await handleSendMessage(attachment, caption);
 
     } catch (err: any) {
       setUploadError(err.message || 'Erreur lors de l\'envoi du fichier.');
-    } finally {
       setIsUploading(false);
-      if(fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -219,9 +214,7 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
   const handleSendRecording = () => {
     if (audioBlob) {
       const audioFile = new File([audioBlob], "recording.webm", { type: audioBlob.type });
-      // Crée un événement "artificiel" pour réutiliser la logique d'upload
-      const event = { target: { files: [audioFile] } } as unknown as React.ChangeEvent<HTMLInputElement>;
-      handleFileChange(event);
+      setFileToPreview(audioFile);
       setAudioBlob(null);
     }
   };
@@ -237,21 +230,12 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     })
   }
 
-  const getConversationTitle = () => {
-    if (isDirectMessage) {
-      return recipient?.displayName || "Conversation directe"
-    } else {
-      return `Classe ${classId}`
-    }
-  }
-
   const handleCancelPreview = () => {
     setFileToPreview(null);
     setCaption("");
     if(fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  // Si un fichier est en cours de prévisualisation, afficher l'écran de prévisualisation
   if (fileToPreview) {
     const fileUrl = URL.createObjectURL(fileToPreview);
     return (
@@ -266,9 +250,11 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
             <img src={fileUrl} alt="Aperçu" className="max-h-full max-w-full object-contain" />
           ) : fileToPreview.type.startsWith('video') ? (
             <video src={fileUrl} controls className="max-h-full max-w-full" />
+          ) : fileToPreview.type.startsWith('audio') ? (
+            <audio src={fileUrl} controls />
           ) : (
             <div className="text-center">
-              <File className="h-16 w-16 mx-auto" />
+              <FileIcon className="h-16 w-16 mx-auto" />
               <p className="mt-2">{fileToPreview.name}</p>
             </div>
           )}
@@ -288,10 +274,8 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
     )
   }
 
-  // Sinon, afficher la vue de chat normale
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -301,13 +285,10 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
               </Button>
             )}
             <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
-              <AvatarFallback>{isDirectMessage ? recipientId?.[0]?.toUpperCase() : "C"}</AvatarFallback>
+              <AvatarFallback>{conversationTitle?.[0]?.toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm sm:text-lg font-semibold truncate">{getConversationTitle()}</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {isDirectMessage ? "En ligne" : `${messages.length} messages`}
-              </p>
+              <h2 className="text-sm sm:text-lg font-semibold truncate">{conversationTitle}</h2>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="shrink-0">
@@ -316,56 +297,37 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
         </div>
       </div>
 
-      {/* Messages */}
       <ScrollArea className="flex-1 p-2 sm:p-4" ref={scrollAreaRef}>
         <div className="space-y-3 sm:space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Aucun message dans cette conversation</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Envoyez le premier message pour commencer la discussion
-              </p>
-            </div>
-          ) : (
-            messages.map((message) => {
-              const isOwnMessage = message.senderId === currentUser.uid
-              return (
-                <div key={message.id} className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${
-                      isOwnMessage
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                    }`}
-                  >
-                    {!isOwnMessage && message.senderDisplayName && (
-                      <p className="text-xs font-medium mb-1 opacity-70">{message.senderDisplayName}</p>
-                    )}
-                    {message.content && <p className="text-sm break-words">{message.content}</p>}
-                    {message.attachment && <MessageAttachment attachment={message.attachment} />}
-                    <p className={`text-xs mt-1 ${isOwnMessage ? "text-blue-100" : "text-muted-foreground"}`}>
-                      {formatMessageTime(message.timestamp)}
-                    </p>
-                  </div>
+          {messages.map((message) => {
+            const isOwnMessage = message.senderId === currentUser.uid
+            return (
+              <div key={message.id} className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 rounded-lg ${ 
+                    isOwnMessage
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  }`}
+                >
+                  {!isOwnMessage && message.senderDisplayName && (
+                    <p className="text-xs font-medium mb-1 opacity-70">{message.senderDisplayName}</p>
+                  )}
+                  {message.content && <p className="text-sm break-words">{message.content}</p>}
+                  {message.attachment && <MessageAttachment attachment={message.attachment} />}
+                  <p className={`text-xs mt-1 ${isOwnMessage ? "text-blue-100" : "text-muted-foreground"}`}>
+                    {formatMessageTime(message.timestamp)}
+                  </p>
                 </div>
-              )
-            })
-          )}
+              </div>
+            )
+          })}
         </div>
       </ScrollArea>
 
-      {/* Message Input */}
       <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        {uploadError && (
-          <Alert variant="destructive" className="mb-2">
-            <AlertDescription>{uploadError}</AlertDescription>
-          </Alert>
-        )}
-        {sendError && (
-          <Alert variant="destructive" className="mb-2">
-            <AlertDescription>{sendError}</AlertDescription>
-          </Alert>
-        )}
+        {uploadError && <Alert variant="destructive" className="mb-2"><AlertDescription>{uploadError}</AlertDescription></Alert>}
+        {sendError && <Alert variant="destructive" className="mb-2"><AlertDescription>{sendError}</AlertDescription></Alert>}
 
         {audioBlob ? (
           <div className="flex items-center space-x-2">
@@ -374,18 +336,13 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
             <Button size="sm" onClick={handleSendRecording}><Send className="h-4 w-4" /></Button>
           </div>
         ) : (
-          <form onSubmit={handleSendMessage} className="flex space-x-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-            />
+          <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(null, newMessage); }} className="flex space-x-2">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             <Button type="button" variant="ghost" size="sm" onClick={handleFileSelect} disabled={isUploading || isRecording}>
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             </Button>
             <Input
-              placeholder={isRecording ? "Enregistrement en cours..." : "Tapez votre message..."}
+              placeholder="Tapez votre message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               disabled={loading || isUploading || isRecording}

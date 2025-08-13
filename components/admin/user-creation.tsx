@@ -125,7 +125,7 @@ export function UserCreation() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="utilisateur@ecole.fr"
+                placeholder="utilisateur@ecole.com"
                 required
               />
             </div>

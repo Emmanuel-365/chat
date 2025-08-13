@@ -50,11 +50,12 @@ export interface Message {
   senderRole: UserRole;
   recipientId?: string;
   classId?: string;
+  courseId?: string; // Ajout
   content?: string; // Rendu optionnel
   attachment?: Attachment; // Ajout de la pièce jointe
   timestamp: Date;
   isRead: boolean;
-  type: "direct" | "class" | "announcement";
+  type: "direct" | "class" | "course" | "announcement"; // Ajout
   participants: string[];
 }
 
@@ -77,9 +78,11 @@ export interface Conversation {
   lastMessage?: string;
   lastMessageTime?: Date;
   unreadCounts: { [key: string]: number };
-  type: "direct" | "class";
+  type: "direct" | "class" | "course"; // Ajout
   className?: string;
   classId?: string;
+  courseName?: string; // Ajout
+  courseId?: string; // Ajout
 }
 
 export interface Notification {

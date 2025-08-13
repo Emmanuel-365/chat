@@ -5,21 +5,19 @@ import { useAuth } from "@/hooks/use-auth"
 import { AdminStats } from "./admin-stats"
 import { UserManagement } from "./user-management"
 import { ClassManagement } from "./class-management"
-import { CourseManagement } from "./course-management" // Importation
+import { CourseManagement } from "./course-management"
 import { MessageModeration } from "./message-moderation"
 import { SystemSettings } from "./system-settings"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, Menu, X, BookCopy } from "lucide-react" // Importation
+import { BarChart3, Users, BookOpen, MessageSquare, Settings, LogOut, Shield, BookCopy } from "lucide-react"
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 
-type AdminTab = "stats" | "users" | "classes" | "courses" | "messages" | "settings"; // Mise à jour du type
+type AdminTab = "stats" | "users" | "classes" | "courses" | "messages" | "settings";
 
 export function AdminDashboard() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<AdminTab>("stats") // Utilisation du nouveau type
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<AdminTab>("stats")
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -31,9 +29,8 @@ export function AdminDashboard() {
     router.push("/dashboard")
   }
 
-  const handleTabChange = (tab: AdminTab) => { // Mise à jour du type
+  const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab)
-    setSidebarOpen(false) // Fermer la sidebar sur mobile
   }
 
   if (!user) return null
@@ -47,9 +44,6 @@ export function AdminDashboard() {
             <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
             <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
           </div>
-          <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setSidebarOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
         <p className="text-xs sm:text-sm text-muted-foreground">Bienvenue, {user.displayName}</p>
       </div>
@@ -86,7 +80,6 @@ export function AdminDashboard() {
           Gestion Classes
         </Button>
 
-        {/* Bouton Gestion Cours */}
         <Button
           variant={activeTab === "courses" ? "default" : "ghost"}
           className="w-full justify-start text-xs sm:text-sm"
@@ -145,37 +138,13 @@ export function AdminDashboard() {
 
   return (
     <div className="h-screen flex bg-gray-50 dark:bg-gray-900">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
+      {/* Static Sidebar */}
+      <div className="flex w-64 lg:w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
         <SidebarContent />
       </div>
 
-      {/* Mobile Sidebar */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" className="w-full sm:w-80 p-0">
-          <SheetTitle className="sr-only">Menu d'administration</SheetTitle>
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
-
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-          </Sheet>
-          <div className="flex items-center space-x-2">
-            <Shield className="h-5 w-5 text-red-600" />
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">Administration</h1>
-          </div>
-          <div className="w-10" /> {/* Spacer for centering */}
-        </div>
-
+      <div className="flex-1 overflow-y-auto flex flex-col">
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === "stats" && <AdminStats />}
