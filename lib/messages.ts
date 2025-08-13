@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   type Unsubscribe,
   setDoc,
+  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import type { Message, SchoolUser, Conversation } from "@/types/user";
@@ -26,7 +27,7 @@ export const sendMessage = async (
   try {
     const messageData = {
       senderId: sender.uid,
-      senderDisplayName: sender.displayName,
+      senderDisplayName: sender.displayName || sender.email,
       senderRole: sender.role,
       content,
       timestamp: serverTimestamp(),
@@ -54,15 +55,15 @@ export const sendMessage = async (
       await updateDoc(conversationRef, {
         lastMessage: content,
         lastMessageTime: serverTimestamp(),
-        unreadCount: conversationSnap.data().unreadCount + 1,
+        unreadCount: increment(1),
       });
     } else {
       const recipient = recipientId ? await getUserById(recipientId) : null;
       const conversationData = {
         participants: recipientId ? [sender.uid, recipientId] : [sender.uid],
         participantNames: recipientId
-          ? [sender.displayName, recipient?.displayName]
-          : [sender.displayName],
+          ? [sender.displayName || sender.email, (recipient?.displayName || recipient?.email) ?? "Utilisateur supprimé"]
+          : [sender.displayName || sender.email],
         lastMessage: content,
         lastMessageTime: serverTimestamp(),
         unreadCount: 1,
@@ -94,7 +95,7 @@ export const subscribeToMessages = (
     q = query(
       collection(db, "messages"),
       where("type", "==", "direct"),
-      where("participants", "array-contains-all", [userId, recipientId]),
+      where("participants", "in", [[userId, recipientId], [recipientId, userId]]),
       orderBy("timestamp", "asc")
     );
   } else if (classId) {
@@ -130,23 +131,29 @@ export const subscribeToMessages = (
   });
 };
 
-export const getConversations = async (userId: string): Promise<Conversation[]> => {
-  try {
-    const q = query(
-      collection(db, "conversations"),
-      where("participants", "array-contains", userId)
-    );
-    const snapshot = await getDocs(q);
+export const subscribeToConversations = (
+  userId: string,
+  callback: (conversations: Conversation[]) => void
+): Unsubscribe => {
+  const q = query(
+    collection(db, "conversations"),
+    where("participants", "array-contains", userId),
+    orderBy("lastMessageTime", "desc")
+  );
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      lastMessageTime: doc.data().lastMessageTime?.toDate(),
-    })) as Conversation[];
-  } catch (error) {
-    console.error("Erreur lors de la récupération des conversations:", error);
-    return [];
-  }
+  return onSnapshot(q, (snapshot) => {
+    try {
+      const conversations: Conversation[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        lastMessageTime: doc.data().lastMessageTime?.toDate(),
+      })) as Conversation[];
+      callback(conversations);
+    } catch (error) {
+      console.error("Error processing conversations snapshot:", error);
+      callback([]);
+    }
+  });
 };
 
 export const markConversationAsRead = async (conversationId: string) => {

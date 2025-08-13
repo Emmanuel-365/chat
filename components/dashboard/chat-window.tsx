@@ -12,6 +12,7 @@ import { sendMessage, subscribeToMessages } from "@/lib/messages";
 import type { Message } from "@/types/user";
 import { getUserById } from "@/lib/contacts";
 import type { SchoolUser } from "@/types/user";
+import { Alert, AlertDescription } from "../ui/alert"
 
 interface ChatWindowProps {
   conversationId: string;
@@ -23,6 +24,7 @@ export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [recipient, setRecipient] = useState<SchoolUser | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Déterminer le type de conversation et les paramètres
@@ -73,7 +75,8 @@ export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
     if (!newMessage.trim() || loading) return;
 
     setLoading(true);
-    const { success } = await sendMessage(
+    setSendError(null);
+    const { success, error } = await sendMessage(
       currentUser,
       newMessage.trim(),
       recipientId,
@@ -82,6 +85,8 @@ export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
 
     if (success) {
       setNewMessage("");
+    } else {
+      setSendError(error || "Impossible d'envoyer le message.");
     }
     setLoading(false);
   };
@@ -160,6 +165,11 @@ export function ChatWindow({ conversationId, currentUser }: ChatWindowProps) {
 
       {/* Message Input */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        {sendError && (
+          <Alert variant="destructive" className="mb-2">
+            <AlertDescription>{sendError}</AlertDescription>
+          </Alert>
+        )}
         <form onSubmit={handleSendMessage} className="flex space-x-2">
           <Input
             placeholder="Tapez votre message..."

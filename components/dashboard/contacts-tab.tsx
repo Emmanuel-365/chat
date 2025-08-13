@@ -32,22 +32,16 @@ export function ContactsTab({ currentUser, onStartConversation }: ContactsTabPro
       setLoading(true)
 
       const [allUsers, studentUsers, teacherUsers, adminUsers] = await Promise.all([
-        getAllUsers(),
-        getUsersByRole("student"),
-        getUsersByRole("teacher"),
-        getUsersByRole("admin"),
+        getAllUsers(currentUser.uid),
+        getUsersByRole("student", currentUser.uid),
+        getUsersByRole("teacher", currentUser.uid),
+        getUsersByRole("admin", currentUser.uid),
       ])
 
-      // Filtrer l'utilisateur actuel
-      const filteredUsers = allUsers.filter((user) => user.uid !== currentUser.uid)
-      const filteredStudents = studentUsers.filter((user) => user.uid !== currentUser.uid)
-      const filteredTeachers = teacherUsers.filter((user) => user.uid !== currentUser.uid)
-      const filteredAdmins = adminUsers.filter((user) => user.uid !== currentUser.uid)
-
-      setAllContacts(filteredUsers)
-      setStudents(filteredStudents)
-      setTeachers(filteredTeachers)
-      setAdmins(filteredAdmins)
+      setAllContacts(allUsers)
+      setStudents(studentUsers)
+      setTeachers(teacherUsers)
+      setAdmins(adminUsers)
       setLoading(false)
     }
 

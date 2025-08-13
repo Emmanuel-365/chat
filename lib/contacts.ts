@@ -19,7 +19,8 @@ export const getAllUsers = async (): Promise<SchoolUser[]> => {
 };
 
 export const getUsersByRole = async (
-  role: "student" | "teacher" | "admin"
+  role: "student" | "teacher" | "admin",
+  excludeId?: string
 ): Promise<SchoolUser[]> => {
   try {
     const q = query(
@@ -29,11 +30,17 @@ export const getUsersByRole = async (
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => ({
+    const users = snapshot.docs.map((doc) => ({
+      uid: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       lastSeen: doc.data().lastSeen?.toDate(),
     })) as SchoolUser[];
+
+    if (excludeId) {
+      return users.filter((user) => user.uid !== excludeId);
+    }
+    return users;
   } catch (error) {
     console.error("Erreur lors de la récupération des utilisateurs par rôle:", error);
     return [];
@@ -120,7 +127,7 @@ export const getUserById = async (userId: string): Promise<SchoolUser | null> =>
       return null;
     }
 
-    return userSnap.data() as SchoolUser;
+    return { uid: userSnap.id, ...userSnap.data() } as SchoolUser;
   } catch (error) {
     console.error("Erreur lors de la récupération de l'utilisateur:", error);
     return null;

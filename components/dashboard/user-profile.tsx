@@ -16,7 +16,7 @@ export function UserProfile({ user }: UserProfileProps) {
   return (
     <div className="flex items-center space-x-3 mt-3">
       <Avatar>
-        <AvatarImage src={user.profilePicture || "/placeholder.svg"} />
+        <AvatarImage src={user.profilePicture} />
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">

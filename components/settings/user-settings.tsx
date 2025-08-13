@@ -70,7 +70,7 @@ export function UserSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={user.profilePicture || "/placeholder.svg"} />
+              <AvatarImage src={user.profilePicture} />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <div className="space-y-1">

@@ -22,6 +22,10 @@ export function DashboardLayout() {
   const [activeTab, setActiveTab] = useState<"messages" | "contacts" | "classes" | "settings">("messages")
   const router = useRouter()
 
+  const handleNewConversationClick = () => {
+    setActiveTab("contacts");
+  };
+
   const handleSignOut = async () => {
     await signOut()
     router.push("/")
@@ -117,6 +121,7 @@ export function DashboardLayout() {
               userId={user.uid}
               selectedConversation={selectedConversation}
               onSelectConversation={setSelectedConversation}
+              onNewConversationClick={handleNewConversationClick}
             />
           )}
           {activeTab === "contacts" && <ContactsTab currentUser={user} onStartConversation={handleStartConversation} />}

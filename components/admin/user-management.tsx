@@ -268,7 +268,7 @@ export function UserManagement() {
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <Avatar>
-                  <AvatarImage src={selectedUser.profilePicture || "/placeholder.svg"} />
+                  <AvatarImage src={selectedUser.profilePicture} />
                   <AvatarFallback>
                     {selectedUser.displayName
                       .split(" ")

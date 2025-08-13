@@ -16,7 +16,7 @@ export const useAuth = () => {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           if (userDoc.exists()) {
-            setUser({ uid: firebaseUser.uid, ...userDoc.data() } as SchoolUser)
+            setUser({ uid: firebaseUser.uid, email: firebaseUser.email!, ...userDoc.data() } as SchoolUser)
           } else {
             setUser(null)
           }

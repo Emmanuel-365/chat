@@ -6,28 +6,35 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Plus } from "lucide-react"
-import { getConversations } from "@/lib/messages"
+import { subscribeToConversations } from "@/lib/messages"
 import type { Conversation } from "@/types/user"
 
 interface ConversationListProps {
   userId: string
   selectedConversation: string | null
   onSelectConversation: (conversationId: string) => void
+  onNewConversationClick: () => void
 }
 
-export function ConversationList({ userId, selectedConversation, onSelectConversation }: ConversationListProps) {
+export function ConversationList({ 
+  userId, 
+  selectedConversation, 
+  onSelectConversation, 
+  onNewConversationClick 
+}: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadConversations = async () => {
-      const convs = await getConversations(userId)
-      setConversations(convs)
-      setLoading(false)
-    }
+    if (!userId) return;
+    setLoading(true);
+    const unsubscribe = subscribeToConversations(userId, (convs) => {
+      setConversations(convs);
+      setLoading(false);
+    });
 
-    loadConversations()
+    return () => unsubscribe();
   }, [userId])
 
   const filteredConversations = conversations.filter((conv) =>
@@ -87,7 +94,7 @@ export function ConversationList({ userId, selectedConversation, onSelectConvers
             className="pl-10"
           />
         </div>
-        <Button className="w-full" size="sm">
+        <Button className="w-full" size="sm" onClick={onNewConversationClick}>
           <Plus className="h-4 w-4 mr-2" />
           Nouvelle conversation
         </Button>
