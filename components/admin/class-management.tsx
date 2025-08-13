@@ -217,13 +217,14 @@ export function ClassManagement() {
                     <SelectValue placeholder="Sélectionnez le niveau" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="6eme">6ème</SelectItem>
-                    <SelectItem value="5eme">5ème</SelectItem>
-                    <SelectItem value="4eme">4ème</SelectItem>
-                    <SelectItem value="3eme">3ème</SelectItem>
-                    <SelectItem value="seconde">Seconde</SelectItem>
-                    <SelectItem value="premiere">Première</SelectItem>
-                    <SelectItem value="terminale">Terminale</SelectItem>
+                    <SelectItem value="L1">Licence 1</SelectItem>
+                    <SelectItem value="L2">Licence 2</SelectItem>
+                    <SelectItem value="L3">Licence 3</SelectItem>
+                    <SelectItem value="M1">Master 1</SelectItem>
+                    <SelectItem value="M2">Master 2</SelectItem>
+                    <SelectItem value="D1">Doctorat 1</SelectItem>
+                    <SelectItem value="D2">Doctorat 2</SelectItem>
+                    <SelectItem value="D3">Doctorat 3</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
