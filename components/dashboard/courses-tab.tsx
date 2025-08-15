@@ -96,7 +96,7 @@ export function CoursesTab({ currentUser, onStartCourseConversation }: CoursesTa
           {courses.length === 0 ? (
             <div className="text-center py-8">
               <BookCopy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Vous n'êtes inscrit à aucun cours.</p>
+              <p className="text-muted-foreground">Vous n&apos;êtes inscrit à aucun cours.</p>
             </div>
           ) : (
             courses.map((course) => <CourseCard key={course.id} course={course} />)

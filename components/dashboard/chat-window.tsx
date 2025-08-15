@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Send, MoreVertical, ArrowLeft, Loader2, Paperclip, Mic, StopCircle, Trash2, File as FileIcon } from "lucide-react"
+import Image from 'next/image';
 import { sendMessage, subscribeToMessages, markConversationAsRead } from "@/lib/messages"
-import type { Attachment, Message, SchoolUser, Course } from "@/types/user"
+import type { Attachment, Message, SchoolUser } from "@/types/user"
 import { getUserById } from "@/lib/contacts"
 import { getCourseById } from "@/lib/courses"
 import { Alert, AlertDescription } from "../ui/alert"
@@ -156,7 +157,7 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
 
       if (cloudinaryData.error) throw new Error(cloudinaryData.error.message);
 
-      let attachmentType: Attachment['type'] = file.name === 'recording.webm' ? 'audio' : (cloudinaryData.resource_type === 'image' ? 'image' :cloudinaryData.resource_type === 'video' ? 'video' : 'file');
+      const attachmentType: Attachment['type'] = file.name === 'recording.webm' ? 'audio' : (cloudinaryData.resource_type === 'image' ? 'image' :cloudinaryData.resource_type === 'video' ? 'video' : 'file');
 
       const attachment: Attachment = {
         url: cloudinaryData.secure_url,
@@ -170,8 +171,12 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
 
       await handleSendMessage(attachment, caption);
 
-    } catch (err: any) {
-      setUploadError(err.message || 'Erreur lors de l\'envoi du fichier.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setUploadError(err.message || 'Erreur lors de l\'envoi du fichier.');
+      } else {
+        setUploadError('Erreur lors de l\'envoi du fichier.');
+      }
       setIsUploading(false);
     }
   };
@@ -196,8 +201,12 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
         newMediaRecorder.start();
         setIsRecording(true);
         setAudioBlob(null);
-      } catch (err) {
-        setUploadError("Permission pour le microphone refusée.");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setUploadError("Permission pour le microphone refusée: " + err.message);
+        } else {
+          setUploadError("Permission pour le microphone refusée.");
+        }
       }
     } else {
       setUploadError("L\'enregistrement audio n\'est pas supporté sur ce navigateur.");
@@ -247,7 +256,7 @@ export function ChatWindow({ conversationId, currentUser, onBack }: ChatWindowPr
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
           {fileToPreview.type.startsWith('image') ? (
-            <img src={fileUrl} alt="Aperçu" className="max-h-full max-w-full object-contain" />
+            <Image src={fileUrl} alt="Aperçu" fill style={{ objectFit: 'contain' }} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
           ) : fileToPreview.type.startsWith('video') ? (
             <video src={fileUrl} controls className="max-h-full max-w-full" />
           ) : fileToPreview.type.startsWith('audio') ? (

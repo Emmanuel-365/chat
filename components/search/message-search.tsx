@@ -67,7 +67,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
           message.recipientId === userId ||
           (message.type === "class" && message.classId);
 
-        const containsSearchTerm = message.content
+        const containsSearchTerm = (message.content || "")
           .toLowerCase()
           .includes(term.toLowerCase());
 
@@ -219,7 +219,7 @@ export function MessageSearch({ userId, onSelectMessage }: MessageSearchProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
-                              {highlightSearchTerm(message.content, searchTerm)}
+                              {highlightSearchTerm(message.content ?? '', searchTerm)}
                             </p>
                             <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                               <div className="flex items-center space-x-1">

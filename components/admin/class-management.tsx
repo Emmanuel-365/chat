@@ -160,7 +160,7 @@ export function ClassManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Gestion des Classes</h1>
-          <p className="text-muted-foreground">Créez et gérez les groupes d'étudiants</p>
+          <p className="text-muted-foreground">Créez et gérez les groupes d&apos;étudiants</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>

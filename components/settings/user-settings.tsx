@@ -45,12 +45,6 @@ export function UserSettings() {
 
   if (!user) return null
 
-  const initials = user.displayName
-    .split(" ")
-    .map((name) => name[0])
-    .join("")
-    .toUpperCase()
-
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto overflow-y-auto">
       {/* Header */}

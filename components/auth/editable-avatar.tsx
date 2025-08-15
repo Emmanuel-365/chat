@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Camera, Loader2, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
 import type { SchoolUser } from '@/types/user';
 import { updateUserProfilePicture } from '@/lib/user';
 
@@ -84,8 +85,12 @@ export function EditableAvatar({ user }: EditableAvatarProps) {
       setOpen(false);
       window.location.reload(); // Rafraîchissement simple pour voir le changement partout
 
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue lors de l\'envoi.');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Une erreur est survenue lors de l\'envoi.');
+      } else {
+        setError('Une erreur est survenue lors de l\'envoi.');
+      }
     } finally {
       setUploading(false);
     }
@@ -111,7 +116,7 @@ export function EditableAvatar({ user }: EditableAvatarProps) {
         <div className="flex flex-col items-center justify-center space-y-4 py-4">
           <div className="w-40 h-40 rounded-full overflow-hidden flex items-center justify-center bg-muted">
             {previewUrl ? (
-              <img src={previewUrl} alt="Aperçu" className="w-full h-full object-cover" />
+              <Image src={previewUrl} alt="Aperçu" fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
             ) : (
               <Avatar className="h-40 w-40">
                 <AvatarImage src={user.profilePicture} alt={user.displayName} />

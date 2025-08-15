@@ -2,6 +2,7 @@
 
 import type { Attachment } from "@/types/user";
 import { File, Download } from 'lucide-react';
+import Image from 'next/image';
 
 interface MessageAttachmentProps {
   attachment: Attachment;
@@ -12,10 +13,12 @@ export function MessageAttachment({ attachment }: MessageAttachmentProps) {
     switch (attachment.type) {
       case 'image':
         return (
-          <img 
+          <Image 
             src={attachment.url} 
             alt={attachment.fileName} 
-            className="max-w-xs max-h-64 rounded-lg object-cover cursor-pointer" 
+            fill
+            style={{ objectFit: 'cover' }}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             onClick={() => window.open(attachment.url, '_blank')}
           />
         );

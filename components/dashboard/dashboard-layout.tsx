@@ -17,7 +17,7 @@ import { MessageCircle, Users, Settings, LogOut, BookOpen, Shield, BookCopy } fr
 import { signOut } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
-import type { SchoolUser } from "@/types/user"
+
 
 type DashboardTab = "messages" | "contacts" | "classes" | "courses" | "settings";
 
@@ -169,7 +169,7 @@ export function DashboardLayout() {
   )
 
   return (
-    <PanelGroup direction="horizontal" className="h-screen bg-gray-50 dark:bg-gray-900">
+    <PanelGroup direction="horizontal" className="h-screen w-full bg-gray-50 dark:bg-gray-900">
       <Panel defaultSize={30} minSize={25} maxSize={40}>
         <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
           <SidebarContent />

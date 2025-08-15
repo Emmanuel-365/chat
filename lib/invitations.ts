@@ -39,17 +39,23 @@ export const createInvitation = async (email: string, role: UserRole, createdBy:
         logger.error({ apiResult }, 'Failed to trigger email sending via API route - Inner Catch');
         // Optionally, throw an error or handle it more gracefully
       }
-    } catch (apiError: any) {
-      logger.error({ apiError }, 'Error calling send-invitation API route - Inner Catch');
+    } catch (apiError: unknown) {
+      if (apiError instanceof Error) {
+        logger.error({ apiError }, 'Error calling send-invitation API route - Inner Catch');
+      } else {
+        logger.error({ apiError }, 'Error calling send-invitation API route - Inner Catch: An unknown error occurred');
+      }
       // Optionally, throw an error or handle it more gracefully
     }
 
     return { success: true, invitationId: docRef.id };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ error }, "Error creating invitation - Outer Catch");
     let errorMessage = "An unknown error occurred.";
     if (error instanceof Error) {
       errorMessage = error.message;
+    } else {
+      errorMessage = "An unknown error occurred.";
     }
     throw new InvitationError(errorMessage);
   }

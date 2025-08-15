@@ -138,7 +138,7 @@ export function AdminDashboard() {
   )
 
   return (
-    <PanelGroup direction="horizontal" className="h-screen bg-gray-50 dark:bg-gray-900">
+    <PanelGroup direction="horizontal" className="h-screen w-full bg-gray-50 dark:bg-gray-900">
         <Panel defaultSize={25} minSize={20} maxSize={35}>
             <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
                 <SidebarContent />

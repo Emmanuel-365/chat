@@ -27,8 +27,12 @@ export function SystemSettings() {
           await updateSystemSettings(defaultSettings);
           setSettings(defaultSettings);
         }
-      } catch (err: any) {
-        setError("Failed to load settings: " + err.message)
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError("Failed to load settings: " + err.message)
+        } else {
+          setError("Failed to load settings: An unknown error occurred")
+        }
       } finally {
         setLoading(false)
       }
@@ -50,8 +54,12 @@ export function SystemSettings() {
         // Revert local state if save fails
         setSettings(settings);
       }
-    } catch (err: any) {
-      setError("Failed to save settings: " + err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError("Failed to save settings: " + err.message);
+      } else {
+        setError("Failed to save settings: An unknown error occurred");
+      }
       // Revert local state if save fails
       setSettings(settings);
     } finally {

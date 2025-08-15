@@ -37,8 +37,12 @@ export async function POST(request: Request) {
     console.log(`Invitation email sent to ${email}`);
 
     return NextResponse.json({ success: true, message: 'Email sent successfully' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de l\'envoi de l\'e-mail d\'invitation :', error);
-    return NextResponse.json({ success: false, message: 'Échec de l\'envoi de l\'e-mail', error: error.message }, { status: 500 });
+    let errorMessage = 'Échec de l\'envoi de l\'e-mail';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return NextResponse.json({ success: false, message: errorMessage, error: errorMessage }, { status: 500 });
   }
 }

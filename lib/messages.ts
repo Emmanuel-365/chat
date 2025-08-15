@@ -12,9 +12,10 @@ import {
   type Unsubscribe,
   setDoc,
   increment,
+  FieldValue,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Message, SchoolUser, Conversation, Class, Course, Attachment } from "@/types/user";
+import type { Message, SchoolUser, Conversation, Class, Attachment } from "@/types/user";
 import { getUserById, getUsersByClass } from "./contacts";
 import { getCoursesByClass, getCourseById } from "./courses";
 
@@ -67,12 +68,12 @@ export const sendMessage = async (
     }
 
     // Créer le message
-    const messageData: Omit<Message, "id" | "timestamp"> & { timestamp: any } = {
+    const messageData: Omit<Message, "id" | "timestamp"> & { timestamp: FieldValue } = {
       senderId: sender.uid,
       senderDisplayName: sender.displayName || sender.email,
       senderRole: sender.role,
       content: content || '',
-      attachment,
+      attachment: attachment ?? undefined,
       timestamp: serverTimestamp(),
       isRead: false,
       type: messageType,
@@ -97,7 +98,7 @@ export const sendMessage = async (
       }
     }
 
-    const unreadCountsUpdate: { [key: string]: any } = {};
+    const unreadCountsUpdate: { [key: string]: number | FieldValue } = {};
     participants.forEach(pId => {
       if (pId !== sender.uid) {
         unreadCountsUpdate[`unreadCounts.${pId}`] = increment(1);
@@ -120,7 +121,7 @@ export const sendMessage = async (
       const participantUsers = await Promise.all(participants.map(p => getUserById(p)));
       const participantNames = participantUsers.filter(Boolean).map(p => p!.displayName || p!.email!);
 
-      const conversationData: Partial<Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: any }> = {
+      const conversationData: Partial<Omit<Conversation, 'id' | 'lastMessageTime'> & { lastMessageTime: FieldValue }> = {
         participants,
         participantNames,
         lastMessage: lastMessageText,
