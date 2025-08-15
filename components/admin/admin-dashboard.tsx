@@ -138,23 +138,25 @@ export function AdminDashboard() {
   )
 
   return (
-    <PanelGroup direction="horizontal" className="h-screen w-full bg-gray-50 dark:bg-gray-900">
-        <Panel defaultSize={25} minSize={20} maxSize={35}>
-            <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
-                <SidebarContent />
-            </div>
-        </Panel>
-        <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
-        <Panel>
-            <div className="flex-1 h-full overflow-y-auto">
-                {activeTab === "stats" && <AdminStats />}
-                {activeTab === "users" && <UserManagement />}
-                {activeTab === "classes" && <ClassManagement />}
-                {activeTab === "courses" && <CourseManagement />}
-                {activeTab === "messages" && <MessageModeration />}
-                {activeTab === "settings" && <SystemSettings />}
-            </div>
-        </Panel>
-    </PanelGroup>
+    <div className="h-screen w-screen overflow-hidden">
+      <PanelGroup direction="horizontal" className="h-full w-full bg-gray-50 dark:bg-gray-900">
+          <Panel defaultSize={25} minSize={20} maxSize={35}>
+              <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
+                  <SidebarContent />
+              </div>
+          </Panel>
+          <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
+          <Panel>
+              <div className="flex-1 h-full overflow-y-auto">
+                  {activeTab === "stats" && <AdminStats />}
+                  {activeTab === "users" && <UserManagement />}
+                  {activeTab === "classes" && <ClassManagement />}
+                  {activeTab === "courses" && <CourseManagement />}
+                  {activeTab === "messages" && <MessageModeration />}
+                  {activeTab === "settings" && <SystemSettings />}
+              </div>
+          </Panel>
+      </PanelGroup>
+    </div>
   )
 }

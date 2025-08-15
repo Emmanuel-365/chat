@@ -169,34 +169,36 @@ export function DashboardLayout() {
   )
 
   return (
-    <PanelGroup direction="horizontal" className="h-screen w-full bg-gray-50 dark:bg-gray-900">
-      <Panel defaultSize={30} minSize={25} maxSize={40}>
-        <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
-          <SidebarContent />
-        </div>
-      </Panel>
-      <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
-      <Panel>
-        <div className="flex-1 flex flex-col h-full min-w-0">
-          {selectedConversation ? (
-            <ChatWindow
-              conversationId={selectedConversation}
-              currentUser={user}
-              onBack={() => setSelectedConversation(null)}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-4">
-              <Card className="p-6 sm:p-8 text-center max-w-md mx-auto">
-                <MessageCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-base sm:text-lg font-semibold mb-2">Sélectionnez une conversation</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Choisissez une conversation dans la liste pour commencer à discuter.
-                </p>
-              </Card>
-            </div>
-          )}
-        </div>
-      </Panel>
-    </PanelGroup>
+    <div className="h-screen w-screen overflow-hidden">
+      <PanelGroup direction="horizontal" className="h-full w-full bg-gray-50 dark:bg-gray-900">
+        <Panel defaultSize={30} minSize={25} maxSize={40}>
+          <div className="flex h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-col">
+            <SidebarContent />
+          </div>
+        </Panel>
+        <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors" />
+        <Panel>
+          <div className="flex-1 flex flex-col h-full min-w-0">
+            {selectedConversation ? (
+              <ChatWindow
+                conversationId={selectedConversation}
+                currentUser={user}
+                onBack={() => setSelectedConversation(null)}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-4">
+                <Card className="p-6 sm:p-8 text-center max-w-md mx-auto">
+                  <MessageCircle className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-2">Sélectionnez une conversation</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Choisissez une conversation dans la liste pour commencer à discuter.
+                  </p>
+                </Card>
+              </div>
+            )}
+          </div>
+        </Panel>
+      </PanelGroup>
+    </div>
   )
 }
